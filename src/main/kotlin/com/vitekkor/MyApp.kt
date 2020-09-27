@@ -1,6 +1,10 @@
 package com.vitekkor
 
 import com.vitekkor.view.MainView
-import tornadofx.App
+import tornadofx.*
 
-class MyApp: App(MainView::class, Styles::class)
+class MyApp: App(MainView::class, Styles::class){
+    init {
+        reloadStylesheetsOnFocus()
+    }
+}
