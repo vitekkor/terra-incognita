@@ -1,6 +1,5 @@
 package com.vitekkor.view
 
-import com.vitekkor.controller.MyController
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import tornadofx.*

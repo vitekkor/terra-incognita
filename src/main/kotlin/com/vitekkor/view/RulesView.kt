@@ -3,11 +3,7 @@ package com.vitekkor.view
 import com.vitekkor.Styles
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.control.ScrollPane
-import javafx.scene.layout.VBox
 import tornadofx.*
-import tornadofx.Stylesheet.Companion.scrollPane
-import tornadofx.Stylesheet.Companion.tabPane
 
 class RulesView : View("My View") {
     override val root = vbox {
