@@ -1,4 +1,8 @@
-package com.vitekkor.model.core
+package com.vitekkor.model.core.player
+
+import com.vitekkor.model.core.Location
+import com.vitekkor.model.core.Move
+import com.vitekkor.model.core.MoveResult
 
 interface Player {
     /** Called by master to set start player location and labyrinth size */

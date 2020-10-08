@@ -2,6 +2,7 @@ package com.vitekkor.model.core.labyrinth
 
 import java.util.*
 import com.vitekkor.model.core.*
+import com.vitekkor.model.core.player.Player
 
 class GameMaster(private val lab: Labyrinth, private val player: Player) {
 

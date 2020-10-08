@@ -1,4 +1,6 @@
-package com.vitekkor.model.core
+package com.vitekkor.model.core.player
+
+import com.vitekkor.model.core.Location
 
 abstract class AbstractPlayer : Player {
 

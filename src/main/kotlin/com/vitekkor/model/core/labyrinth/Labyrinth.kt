@@ -40,6 +40,9 @@ class Labyrinth private constructor(val width: Int, val height: Int, private val
             val wormholes = mutableMapOf<Int, Wormhole>()
             val wormholeLocations = mutableMapOf<Wormhole, Location>()
             val wormholeMap = mutableMapOf<Location, Location>()
+            var startExists = false
+            var endExists = false
+            var treasureExists = false
             for ((y, line) in lines.drop(1).dropLast(1).withIndex()) {
 
                 require(line.startsWith("#") && line.endsWith("#")) { "Illegal labyrinth symbol" }
@@ -49,10 +52,16 @@ class Labyrinth private constructor(val width: Int, val height: Int, private val
                     val location = Location(x, y)
                     map[location] = when (char) {
                         ' ' -> Empty
-                        'S' -> Entrance
-                        'E' -> Exit
+                        'S' -> Entrance.apply {
+                            require(!startExists) { "The labyrinth already contains a start" }
+                            startExists = true
+                        }
+                        'E' -> Exit.apply {
+                            require(!endExists) { "The labyrinth already contains a end" }
+                            endExists = true
+                        }
                         '#' -> Wall
-                        'T' -> WithContent(Treasure)
+                        'T' -> WithContent(Treasure).apply { treasureExists = true }
                         in '0'..'9' -> Wormhole(char).apply {
                             wormholes[char - '0'] = this
                             wormholeLocations[this] = location
@@ -61,6 +70,10 @@ class Labyrinth private constructor(val width: Int, val height: Int, private val
                     }
                 }
             }
+            require(startExists) {"The labyrinth must contain a start"}
+            require(endExists) {"The labyrinth must contain a end"}
+            require(treasureExists) { "The labyrinth must contain at least one treasure"}
+
             for ((wormholeId, wormhole) in wormholes) {
                 wormhole.next = wormholes[wormholeId + 1]
                         ?: wormholes[0]
@@ -71,6 +84,8 @@ class Labyrinth private constructor(val width: Int, val height: Int, private val
             }
             check(checkWormholes(map, wormholeMap)) { "Wormholes are set incorrectly" }
             check(wormholeMap.entries.size <= 10) { "The number of wormholes can be from 0 to 10" }
+
+
 
             return Labyrinth(width, height, map, wormholeMap)
         }
