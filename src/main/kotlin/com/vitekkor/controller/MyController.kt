@@ -1,10 +1,18 @@
 package com.vitekkor.controller
 
-import com.vitekkor.model.core.Empty
-import com.vitekkor.model.core.Wall
+import com.vitekkor.model.core.*
+import com.vitekkor.model.core.labyrinth.GameMaster
 import com.vitekkor.model.core.labyrinth.Labyrinth
+import com.vitekkor.model.core.player.Human
+import com.vitekkor.view.GamePreView
+import com.vitekkor.view.GameView
+import com.vitekkor.view.MainMenuView
+import com.vitekkor.view.MainView
+import javafx.animation.Interpolator
 import javafx.scene.control.Alert
 import javafx.scene.control.Alert.AlertType
+import javafx.scene.control.ButtonType
+import javafx.scene.control.Tooltip
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
@@ -12,10 +20,14 @@ import javafx.scene.layout.StackPane
 import javafx.scene.text.Text
 import tornadofx.*
 import java.io.File
+import kotlin.properties.Delegates
 
 
 class MyController : Controller() {
-    //val view: GamePreView by inject()
+    private val gameView: GameView by inject()
+    private val mainView = find(MainView::class)
+    private val gamePreView = find(GamePreView::class)
+    private val mainMenuView = find(MainMenuView::class)
     private lateinit var labyrinth: Labyrinth
 
     //var backButton: Button? = null
@@ -81,6 +93,7 @@ class MyController : Controller() {
     private lateinit var rearWall: Image
     private lateinit var rightWall: Image
     private lateinit var leftWall: Image
+    private lateinit var leftWall1: Image
     private lateinit var emptyCell: Image
     private lateinit var wormhole: Image
     private lateinit var treasure: Image
@@ -89,11 +102,15 @@ class MyController : Controller() {
     private lateinit var entrance2: Image
     private lateinit var exit1: Image
     private lateinit var exit2: Image
+    private lateinit var playerTile: Image
+
+    //private lateinit var playerMakesMove: ArrayList<Image>
     fun loadAssets() {
         frontWall = Image(resources.stream("/tiles/wall_front.png"))
         rearWall = Image(resources.stream("/tiles/wall_rear.png"))
         rightWall = Image(resources.stream("/tiles/wall_right.png"))
-        leftWall = Image(resources.stream("/tiles/wall_left.png"))
+        leftWall = Image(resources.stream("/tiles/wall_left2.png"))
+        leftWall1 = Image(resources.stream("/tiles/wall_left.png"))
         emptyCell = Image(resources.stream("/tiles/empty_cell1.png"))
         wormhole = Image(resources.stream("/tiles/wormhole.png"))
         treasure = Image(resources.stream("/tiles/treasure.png"))
@@ -102,14 +119,17 @@ class MyController : Controller() {
         entrance2 = Image(resources.stream("/tiles/entrance2.png"))
         exit1 = Image(resources.stream("/tiles/exit1.png"))
         exit2 = Image(resources.stream("/tiles/exit2.png"))
+        playerTile = Image(resources.stream("/tiles/player_moves/player_1.png"))
+        //for (i in 1..15) playerMakesMove.add(Image(resources.stream("/tiles/player_moves/player_$i.png")))
     }
 
-    private fun getTile(type: String): ImageView = ImageView().apply {
+    fun getTile(type: String): ImageView = ImageView().apply {
         this.image = when (type) {
             "front_wall" -> frontWall
             "rear_wall" -> rearWall
             "right_wall" -> rightWall
             "left_wall" -> leftWall
+            "left_wall1" -> leftWall1
             "wormhole" -> wormhole
             "treasure" -> treasure
             "treasure_collected" -> treasureCollected
@@ -117,45 +137,30 @@ class MyController : Controller() {
             "entrance2" -> entrance2
             "exit1" -> exit1
             "exit2" -> exit2
+            "player" -> playerTile
             else -> emptyCell
         }
         this.fitHeight = this.image.height / 3.0
         this.fitWidth = this.image.width / 3.0
+        //isVisible = false
     }
 
+    private lateinit var playerMovesAnimation: ImageView
+
+    /*private fun createMovesAnimation():Group = Group().apply {
+        timeline(true) { cycleCount = Animation.INDEFINITE; keyframe(1.seconds) { keyvalue()}  }
+    }*/
+    private val map = mutableMapOf<Pair<Int, Int>, ImageView>()
+
     fun createMap(): StackPane {
+        val playerStackPane = StackPane()
         val stackPane = StackPane()
-
-        fun getWall(x: Int, y: Int): ImageView {
-            var i = x
-            var j = y
-            while (i < labyrinth.width) {
-                if (labyrinth[i, j] is Wall) i++ else break
-            }
-            val horizontalWalls = i - x
-            i = x
-            while (j < labyrinth.height) {
-                if (labyrinth[i, j] is Wall) j++ else break
-            }
-            val verticalWalls = j - y
-            val wall: ImageView
-            wall = if (horizontalWalls > verticalWalls) getTile("front_wall") else getTile("left_wall")
-            wall.translateX = y * 66.0 - 39.0 * x
-            wall.translateY = y * 20.3 + 37.0 * x
-            return wall
-        }
-
         fun getStartOrExit(entrance: Boolean, x: Int, y: Int): ImageView {
             val number = if (labyrinth[x, y + 1] is Empty || labyrinth[x, y - 1] is Empty) 1 else 2
             val tileName = if (entrance) "entrance" else "exit"
             val tile = getTile("$tileName$number")
-            if (number == 2) {
-                tile.translateX = x * 66.0 - 24.0 * y
-                tile.translateY = x * 20.3 + 23.0 * y
-            } else {
-                tile.translateX = x * 66.0 - 26.0 * y
-                tile.translateY = x * 20.3 + 20.0 * y
-            }
+            tile.translateX = x * 66.0 - 39.0 * y
+            tile.translateY = x * 20.3 + 37.0 * y
             return tile
         }
 
@@ -167,57 +172,247 @@ class MyController : Controller() {
         }
 
         for (i in 0 until labyrinth.width) {
-            stackPane.add(getTile("rear_wall"))
-            stackPane.children.last().translateX = i * 66.0 + 39.0
-            stackPane.children.last().translateY = i * 20.3 - 37.0
+            val rearWall = getTile("rear_wall")
+            rearWall.translateX = i * 66.0 + 39.0
+            rearWall.translateY = i * 20.3 - 37.0
+            stackPane.add(rearWall)
+            map[i to -1] = rearWall
         }
-        for (i in 0 until labyrinth.width) {
-            for (j in 0 until labyrinth.height) {
+        for (i in 0 until labyrinth.height) {
+            for (j in 0 until labyrinth.width) {
                 if (j == 0) {
-                    stackPane.add(getTile("left_wall"))
-                    stackPane.children.last().translateX = -66.0 - 39.0 * i
-                    stackPane.children.last().translateY = -20.3 + 37.0 * i
+                    val leftWall = getTile("left_wall1")
+                    leftWall.translateX = -66.0 - 39.0 * i
+                    leftWall.translateY = -20.3 + 37.0 * i
+                    stackPane.add(leftWall)
+                    map[-1 to i] = leftWall
                 }
-                when (labyrinth[i, j].toString()) {
-                    "wall" -> stackPane.add(getWall(j, i))
+                when (labyrinth[j, i].toString()) {
+                    "wall" -> {
+                        val wall = getTile("left_wall")
+                        wall.translateX = j * 66.0 - 39.0 * i
+                        wall.translateY = j * 20.3 + 37.0 * i
+                        stackPane.add(wall)
+                        map[j to i] = wall
+                    }
                     "treasure" -> {
                         val treasure = getTile("treasure")
                         treasure.translateX = j * 66.0 - 39.0 * i
                         treasure.translateY = j * 20.3 + 37.0 * i
                         stackPane.add(treasure)
-                        //children.add(getTile("treasure_collected"))
+                        map[j to i] = treasure
                     }
-                    "emptyCell" -> stackPane.add(getEmptyCell(j, i))
+                    "emptyCell" -> {
+                        val emptyCell = getEmptyCell(j, i)
+                        stackPane.add(emptyCell)
+                        map[j to i] = emptyCell
+                    }
                     "wormhole" -> {
-                        val tile = getTile(labyrinth[i, j].toString())
-                        tile.translateX = j * 66.0 - 32.0 * i
-                        tile.translateY = j * 20.3 + 39.0 * i
-                        stackPane.add(tile)
-                        //children.add(tile)
+                        val wormhole = getTile("wormhole")
+                        wormhole.translateX = j * 66.0 - 39.0 * i
+                        wormhole.translateY = j * 20.3 + 37.0 * i
+                        stackPane.add(wormhole)
+                        map[j to i] = wormhole
                     }
                     "entrance" -> {
-                        val tile = getStartOrExit(true, j, i)
-                        stackPane.add(getEmptyCell(j, i))
-                        stackPane.add(tile)
+                        val entrance = getStartOrExit(true, j, i)
+                        entrance.isVisible = true
+                        playerMovesAnimation = getTile("player")
+                        playerMovesAnimation.isVisible = true
+                        playerMovesAnimation.translateX = entrance.translateX
+                        playerMovesAnimation.translateY = entrance.translateY
+                        stackPane.add(entrance)
+                        playerStackPane.add(playerMovesAnimation)
+                        map[j to i] = entrance
                     }
                     "exit" -> {
-                        val tile = getStartOrExit(false, j, i)
-                        stackPane.add(getEmptyCell(j, i))
-                        stackPane.add(tile)
+                        val exit = getStartOrExit(false, j, i)
+                        //exit.isVisible = false
+                        stackPane.add(exit)
+                        map[j to i] = exit
                     }
                 }
             }
             val wall = getTile("right_wall")
-            wall.translateX = 66.0 * labyrinth.height - 39.0 * i
-            wall.translateY = 20.3 * labyrinth.height + 37.0 * i
+            wall.translateX = 66.0 * labyrinth.width - 39.0 * i
+            wall.translateY = 20.3 * labyrinth.width + 37.0 * i
             stackPane.add(wall)
+            map[labyrinth.width to i] = wall
         }
         for (i in 0 until labyrinth.width) {
-            stackPane.add(getTile("front_wall"))
-            stackPane.children.last().translateX = i * 66.0 - 39.0 * labyrinth.height
-            stackPane.children.last().translateY = i * 20.3 + 37.0 * labyrinth.height
+            val frontWall = getTile("front_wall")
+            frontWall.translateX = i * 66.0 - 39.0 * labyrinth.height
+            frontWall.translateY = i * 20.3 + 37.0 * labyrinth.height
+            stackPane.add(frontWall)
+            map[i to labyrinth.height] = frontWall
         }
+        stackPane.add(playerStackPane)
         return stackPane
     }
 
+
+    private lateinit var playerLocation: Location
+
+    fun showMoveResult(result: MoveResult) {
+        val move: WalkMove = player.getNextMove() as WalkMove
+        if (result.successful) {
+            val (x, y) = when (move.direction) {
+                Direction.NORTH -> {
+                    playerLocation = playerLocation.copy(y = playerLocation.y - 1)
+                    39.0 to -37.0
+                }
+                Direction.EAST -> {
+                    playerLocation = playerLocation.copy(x = playerLocation.x + 1)
+                    66.0 to 20.3
+                }
+                Direction.SOUTH -> {
+                    playerLocation = playerLocation.copy(y = playerLocation.y + 1)
+                    -39.0 to 37.0
+                }
+                Direction.WEST -> {
+                    playerLocation = playerLocation.copy(x = playerLocation.x - 1)
+                    -66.0 to -20.3
+                }
+            }
+            map[playerLocation.x to playerLocation.y]!!.isVisible = true
+            timeline(true) {
+                keyframe(1.seconds) {
+                    keyvalue(playerMovesAnimation.translateXProperty(), x + playerMovesAnimation.translateX)
+                    keyvalue(playerMovesAnimation.translateYProperty(), y + playerMovesAnimation.translateY)
+                }
+                setOnFinished {
+                    if (result.room is Wormhole) {
+                        val newXOldX = labyrinth.wormholeMap[playerLocation]!!.x - playerLocation.x
+                        val newYOldY = labyrinth.wormholeMap[playerLocation]!!.y - playerLocation.y
+                        playerLocation = labyrinth.wormholeMap[playerLocation]!!
+                        val newX = playerMovesAnimation.translateX + newXOldX * 66.0 - newYOldY * 39.0
+                        val newY = playerMovesAnimation.translateY + newYOldY * 37.0 + newXOldX * 20.3
+                        map[playerLocation.x to playerLocation.y]!!.isVisible = true
+                        timeline(true) {
+                            keyframe(0.67.seconds) {
+                                keyvalue(playerMovesAnimation.translateXProperty(), newX, Interpolator.EASE_BOTH)
+                                keyvalue(playerMovesAnimation.translateYProperty(), newY, Interpolator.EASE_BOTH)
+                                setOnFinished { moveNotMade = true }
+                            }
+                        }
+                    } else moveNotMade = true
+                }
+            }
+
+        } else {
+            val pos = move.direction + playerLocation; map[pos.x to pos.y]!!.isVisible = true
+            moveNotMade = true
+        }
+        if (!result.condition.exitReached) {
+            val tooltip = Tooltip(result.status)
+            tooltip.opacity = 0.0
+            tooltip.show(gameView.currentWindow)
+            tooltip.opacityProperty().animate(1.0, 0.5.seconds) {
+                setOnFinished {
+                    timeline(true) {
+                        keyframe(0.5.seconds) {}
+                        setOnFinished {
+                            tooltip.opacityProperty().animate(0.0, 0.5.seconds) {
+                                setOnFinished { tooltip.hide() }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private lateinit var player: Human
+    private lateinit var gameMaster: GameMaster
+    var moveLimit by Delegates.notNull<Int>()
+    private var moveNotMade = true
+
+    fun makeMove(button: Char) {
+        if (moveNotMade) {
+            moveNotMade = false
+            player.setNextMove(when (button) {
+                'w' -> WalkMove(Direction.NORTH)
+                'd' -> WalkMove(Direction.EAST)
+                's' -> WalkMove(Direction.SOUTH)
+                'a' -> WalkMove(Direction.WEST)
+                else -> WaitMove
+            })
+            val moves = gameMaster.moves
+            var wallCount = 0
+            if (moves < moveLimit) {
+                val oldMoves = gameMaster.moves
+                val moveResult = gameMaster.makeMove()
+                val newMoves = gameMaster.moves
+                wallCount += if (oldMoves == newMoves) 1 else 0
+                if (wallCount >= 100) endGame(moveResult)
+                gameMaster.addMoveToPath(moves)
+                gameView.setMovesLeft(moveLimit - newMoves)
+                if (moveResult.exitReached) endGame(moveResult)
+            } else endGame(GameMaster.GameResult(moves, exitReached = false))
+        }
+    }
+
+    fun startGame(): Int {
+        player = Human()
+        gameMaster = GameMaster(labyrinth, player)
+        playerLocation = labyrinth.entrances[0]
+        return moveLimit
+    }
+
+    private fun endGame(result: GameMaster.GameResult) {
+        val alert = Alert(AlertType.INFORMATION)
+        alert.title = "Game Result"
+        alert.headerText = if (result.exitReached) "You Win!" else "Game Over"
+        val contentText = if (result.exitReached)
+            "Congratulations! You made ${result.moves} moves, collected treasures, and reached the exit."
+        else "Unfortunately, you lost. Try again."
+        val expContent = GridPane()
+        val text = Text(contentText)
+        text.wrapIn(expContent)
+        expContent.maxWidth = Double.MAX_VALUE
+        alert.dialogPane.content = expContent
+        //alert.graphic = ImageView()
+        val toGamePreView = ButtonType("Play another labyrinth")
+        val playAgain = ButtonType("Play again")
+        val toMainMenu = ButtonType("Menu")
+        val tryAgain = ButtonType("Try again")
+        val buttons = arrayListOf<ButtonType>()
+        if (result.exitReached) {
+            buttons.add(toGamePreView); buttons.add(playAgain)
+        } else buttons.add(tryAgain)
+        buttons.add(toMainMenu)
+        alert.buttonTypes.setAll(buttons)
+        val dialogResult = alert.showAndWait()
+        when (dialogResult.get()) {
+            toGamePreView -> {
+                mainView.setFragment(gamePreView)
+                gameView.replaceWith<MainView>(ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.RIGHT))
+            } // go to game settings
+            toMainMenu -> {
+                mainView.setFragment(mainMenuView)
+                gameView.replaceWith<MainView>(ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.RIGHT))
+            } // go to menu
+            tryAgain -> tryAgain() //reload game
+            playAgain -> tryAgain()
+        }
+    }
+
+    private fun tryAgain() {
+        gameView.newGame()
+    }
+//ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.LEFT)
+//progressbar {
+//    thread {
+//        for (i in 1..100) {
+//            Platform.runLater { progress = i.toDouble() / 100.0 }
+//            Thread.sleep(100)
+//        }
+//    }
+//}
+//progressbar(completion) {
+//    progressProperty().addListener {
+//        obsVal, old, new ->  print("VALUE: $new")
+//    }
+//}
 }

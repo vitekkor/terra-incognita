@@ -33,6 +33,9 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
         }
         return GameResult(moves, exitReached = false)
     }
+    fun addMoveToPath(move: Int) {
+        playerPath[move] = playerLocation
+    }
 
     fun makeMove(): GameResult {
         if (playerCondition.exitReached) return GameResult(moves, exitReached = true)

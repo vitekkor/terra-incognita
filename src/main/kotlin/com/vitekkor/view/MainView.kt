@@ -7,7 +7,7 @@ import tornadofx.*
 import java.awt.Color
 
 class MainView : View("Terra Incognita") {
-    private val menu: MainMenuView by inject()
+    private val menu = find(MainMenuView::class)
 
     /*private val backButton: Button = button("Back") {
         //isVisible = false
@@ -24,5 +24,9 @@ class MainView : View("Terra Incognita") {
         }
         center = menu.root
         //bottom = hbox { add(backButton) }
+    }
+
+    fun setFragment(fragment: Fragment) {
+        root.center = fragment.root
     }
 }

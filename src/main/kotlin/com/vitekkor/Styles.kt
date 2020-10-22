@@ -69,5 +69,17 @@ class Styles : Stylesheet() {
                 borderColor += box(Color.RED)
             }
         }
+        s(scrollPane, Stylesheet.listCell){
+            baseColor = c("#000000")
+            backgroundColor = multi(colorOfBackground)
+            textFill = Paint.valueOf(colorOfText)
+            selectionBarText = Paint.valueOf(colorOfText)
+            borderColor += box(colorOfBorder)
+            backgroundRadius += box(radiusOfBorder)
+            borderRadius += box(radiusOfBorder)
+        }
+        s(scrollBar) {
+            baseColor = c("#05074F")
+        }
     }
 }

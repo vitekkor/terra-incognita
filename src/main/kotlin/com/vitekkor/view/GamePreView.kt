@@ -9,7 +9,9 @@ import javafx.stage.FileChooser
 import tornadofx.*
 import java.io.File
 
-class GamePreView : View("My View") {
+class GamePreView : Fragment() {
+    private val gameView: GameView by inject()
+    private val mainView: MainView by inject()
     private val controller: MyController by inject()
     private var min = 2
     private val length = List(39) { min++ }
@@ -25,6 +27,13 @@ class GamePreView : View("My View") {
         add(comboboxWidth)
         label("X") { hboxConstraints { marginLeftRight(5.0) } }
         add(comboboxHeight)
+    }
+    private val movesLimit = textfield("1000") { hboxConstraints { marginLeftRight(20.0) } }
+    private val movesLimitHBox = hbox {
+        alignment = Pos.CENTER
+        hboxConstraints { margin = Insets(20.0) }
+        label("Enter moves limit") { hboxConstraints { marginLeftRight(20.0) } }
+        add(movesLimit)
     }
     private lateinit var file: List<File>
     private val initialDirectory = File(resources.url("/labyrinths/").toURI())
@@ -50,6 +59,7 @@ class GamePreView : View("My View") {
             label("Enter the player's name") { hboxConstraints { marginLeftRight(20.0) } }
             add(playerName)
         }
+        add(movesLimitHBox)
         add(emptyHBox)
         emptyHBox.add(defaultLabyrinth)
         hbox {
@@ -67,9 +77,20 @@ class GamePreView : View("My View") {
             action {
                 when {
                     playerName.text.trim().isEmpty() -> playerName.addClass("error")
-                    defaultLabyrinth.parent != null -> controller.loadLabyrinth(size =
-                    comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())
-                    else -> controller.loadLabyrinth(file[0])
+                    movesLimit.text.trim().isEmpty() || movesLimit.text.toIntOrNull() == null-> movesLimit.addClass("error")
+                    defaultLabyrinth.parent != null -> {
+                        controller.loadLabyrinth(size =
+                        comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())
+                        controller.moveLimit = movesLimit.text.toInt()
+                        mainView.replaceWith<GameView>()
+                        gameView.newGame()
+                    }
+                    else -> {
+                        controller.loadLabyrinth(file[0])
+                        controller.moveLimit = movesLimit.text.toInt()
+                        mainView.replaceWith<GameView>()
+                        gameView.newGame()
+                    }
                 }
             }
         }
@@ -78,5 +99,7 @@ class GamePreView : View("My View") {
     init {
         playerName.onMousePressed = EventHandler { playerName.removeClass("error") }
         playerName.textProperty().addListener { _, _, _ -> playerName.removeClass("error") }
+        movesLimit.onMousePressed = EventHandler { movesLimit.removeClass("error") }
+        movesLimit.textProperty().addListener { _, _, _ -> movesLimit.removeClass("error") }
     }
 }

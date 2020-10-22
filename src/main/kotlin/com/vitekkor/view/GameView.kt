@@ -1,16 +1,70 @@
 package com.vitekkor.view
 
 import com.vitekkor.controller.MyController
+import javafx.animation.Transition
+import javafx.geometry.Insets
+import javafx.geometry.Pos
+import javafx.scene.control.Button
+import javafx.scene.control.Label
+import javafx.scene.input.KeyCombination
+import javafx.scene.layout.Background
+import javafx.scene.layout.BackgroundFill
+import javafx.scene.layout.CornerRadii
+import javafx.scene.layout.StackPane
+import javafx.scene.paint.Color
+import javafx.scene.paint.Paint
+import javafx.util.Duration
 import tornadofx.*
 import java.io.File
+import kotlin.reflect.jvm.internal.impl.descriptors.PossiblyInnerType
 
 class GameView : View() {
     private val controller: MyController by inject()
-    override val root = stackpane {}
+    private val movesLimitLabel = Label("").apply {
+        stackpaneConstraints { alignment = Pos.TOP_RIGHT; margin = Insets(20.0) }
+    }
+    private val terraLabel = Label("Terra Incognita").apply {
+        stackpaneConstraints { alignment = Pos.TOP_CENTER; margin = Insets(20.0) }
+        addClass("main")
+    }
+    private val helpButton = Button("Help").apply {
+        action { tooltip { text = "Help" } }
+        stackpaneConstraints { alignment = Pos.TOP_LEFT; margin = Insets(20.0) }
+    }
+    override val root = stackpane {
+        background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
+        shortcut(KeyCombination.valueOf("w")) { controller.makeMove('w') }
+        shortcut(KeyCombination.valueOf("d")) { controller.makeMove('d') }
+        shortcut(KeyCombination.valueOf("s")) { controller.makeMove('s') }
+        shortcut(KeyCombination.valueOf("a")) { controller.makeMove('a') }
+        shortcut(KeyCombination.valueOf("Esc")) { replaceWith<MainView>(ViewTransition.Fade(0.3.seconds)) }
+    }
 
     init {
-        controller.loadLabyrinth(File(resources.url("/labyrinths/3x3.txt").toURI()))
         val stackPane = controller.createMap()
+        root.add(stackPane)
+        stackPane.toBack()
+        movableAndZoomableStackpane(stackPane)
+        movesLimitLabel.text = "Moves left: ${controller.startGame()}"
+    }
+
+    fun setMovesLeft(movesLeft: Int) {
+        movesLimitLabel.text = "Moves left: $movesLeft"
+    }
+
+    fun newGame() {
+        root.clear()
+        root.add(terraLabel)
+        root.add(movesLimitLabel)
+        root.add(helpButton)
+        val stackPane = controller.createMap()
+        root.add(stackPane)
+        stackPane.toBack()
+        movableAndZoomableStackpane(stackPane)
+        movesLimitLabel.text = "Moves left: ${controller.startGame()}"
+    }
+
+    private fun movableAndZoomableStackpane(stackPane: StackPane) {
         var x = 0.0
         var y = 0.0
         var lastTranslateX = 0.0
@@ -34,6 +88,5 @@ class GameView : View() {
             stackPane.scaleX *= zoomFactor
             stackPane.scaleY *= zoomFactor
         }
-        root.add(stackPane)
     }
 }
