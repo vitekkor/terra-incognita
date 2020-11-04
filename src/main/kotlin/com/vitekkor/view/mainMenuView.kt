@@ -7,22 +7,22 @@ import tornadofx.*
 
 class MainMenuView : Fragment() {
     override val root = vbox {
-        shortcut(KeyCombination.valueOf("Esc")) { replaceWith<ExitView>() }
+        addClass("setBackgroundFill")
         alignment = Pos.CENTER
         button("Play") {
             vboxConstraints { margin = Insets(20.0) }
-            action { replaceWith<GamePreView>() }
+            action { replaceWith<GamePreView>(ViewTransition.Fade(0.3.seconds)) }
         }
         button("Game rules") {
             vboxConstraints { margin = Insets(20.0) }
-            action { replaceWith<RulesView>() }
+            action { replaceWith<RulesView>(ViewTransition.Fade(0.3.seconds)) }
         }
         /*button("Settings") {
             vboxConstraints { margin = Insets(20.0) }
         }*/
         button("Exit") {
             vboxConstraints { margin = Insets(20.0) }
-            action { replaceWith<ExitView>() }
+            action { replaceWith<ExitView>(ViewTransition.Fade(0.3.seconds)) }
         }
     }
 }

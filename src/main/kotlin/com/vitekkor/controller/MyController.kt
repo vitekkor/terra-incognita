@@ -12,6 +12,7 @@ import javafx.animation.Interpolator
 import javafx.scene.control.Alert
 import javafx.scene.control.Alert.AlertType
 import javafx.scene.control.ButtonType
+import javafx.scene.control.Dialog
 import javafx.scene.control.Tooltip
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
@@ -142,7 +143,7 @@ class MyController : Controller() {
         }
         this.fitHeight = this.image.height / 3.0
         this.fitWidth = this.image.width / 3.0
-        //isVisible = false
+        isVisible = false
     }
 
     private lateinit var playerMovesAnimation: ImageView
@@ -282,9 +283,9 @@ class MyController : Controller() {
                 }
                 setOnFinished {
                     if (result.room is Wormhole) {
-                        val newXOldX = labyrinth.wormholeMap[playerLocation]!!.x - playerLocation.x
-                        val newYOldY = labyrinth.wormholeMap[playerLocation]!!.y - playerLocation.y
-                        playerLocation = labyrinth.wormholeMap[playerLocation]!!
+                        val newXOldX = labyrinth.wormholeMap.getValue(playerLocation).x - playerLocation.x
+                        val newYOldY = labyrinth.wormholeMap.getValue(playerLocation).y - playerLocation.y
+                        playerLocation = labyrinth.wormholeMap.getValue(playerLocation)
                         val newX = playerMovesAnimation.translateX + newXOldX * 66.0 - newYOldY * 39.0
                         val newY = playerMovesAnimation.translateY + newYOldY * 37.0 + newXOldX * 20.3
                         map[playerLocation.x to playerLocation.y]!!.isVisible = true
@@ -386,12 +387,12 @@ class MyController : Controller() {
         val dialogResult = alert.showAndWait()
         when (dialogResult.get()) {
             toGamePreView -> {
-                mainView.setFragment(gamePreView)
-                gameView.replaceWith<MainView>(ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.RIGHT))
+                mainView.root.center.replaceWith(gamePreView.root)
+                gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
             } // go to game settings
             toMainMenu -> {
-                mainView.setFragment(mainMenuView)
-                gameView.replaceWith<MainView>(ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.RIGHT))
+                mainView.root.center.replaceWith(mainMenuView.root, centerOnScreen = true)
+                gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
             } // go to menu
             tryAgain -> tryAgain() //reload game
             playAgain -> tryAgain()
@@ -415,4 +416,30 @@ class MyController : Controller() {
 //        obsVal, old, new ->  print("VALUE: $new")
 //    }
 //}
+
+    fun exitFromGameView() {
+        val alert = Alert(AlertType.CONFIRMATION)
+        alert.title = "Exit"
+        alert.headerText = "Are you sure want to quit?"
+        val contentText = "All your progress will be reset"
+        val expContent = GridPane()
+        val text = Text(contentText)
+        text.wrapIn(expContent)
+        expContent.maxWidth = Double.MAX_VALUE
+        alert.dialogPane.content = expContent
+        //alert.graphic = ImageView()
+        val yes = ButtonType("Yes")
+        val no = ButtonType("No")
+        alert.buttonTypes.setAll(yes, no)
+        val dialogResult = alert.showAndWait()
+        when (dialogResult.get()) {
+            yes -> {
+                mainView.root.center.replaceWith(gamePreView.root)
+                gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
+            }
+            no -> {
+                alert.close()
+            }
+        }
+    }
 }

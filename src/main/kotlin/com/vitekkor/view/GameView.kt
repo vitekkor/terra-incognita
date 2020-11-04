@@ -1,22 +1,14 @@
 package com.vitekkor.view
 
 import com.vitekkor.controller.MyController
-import javafx.animation.Transition
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.control.Button
-import javafx.scene.control.Label
+import javafx.scene.control.*
 import javafx.scene.input.KeyCombination
-import javafx.scene.layout.Background
-import javafx.scene.layout.BackgroundFill
-import javafx.scene.layout.CornerRadii
-import javafx.scene.layout.StackPane
+import javafx.scene.layout.*
 import javafx.scene.paint.Color
-import javafx.scene.paint.Paint
-import javafx.util.Duration
+import javafx.scene.text.Text
 import tornadofx.*
-import java.io.File
-import kotlin.reflect.jvm.internal.impl.descriptors.PossiblyInnerType
 
 class GameView : View() {
     private val controller: MyController by inject()
@@ -28,7 +20,23 @@ class GameView : View() {
         addClass("main")
     }
     private val helpButton = Button("Help").apply {
-        action { tooltip { text = "Help" } }
+        action {
+            val tooltip = Tooltip("Help")
+            tooltip.opacity = 0.0
+            tooltip.show(this@GameView.currentWindow)
+            tooltip.opacityProperty().animate(1.0, 0.5.seconds) {
+                setOnFinished {
+                    timeline(true) {
+                        keyframe(0.5.seconds) {}
+                        setOnFinished {
+                            tooltip.opacityProperty().animate(0.0, 0.5.seconds) {
+                                setOnFinished { tooltip.hide() }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         stackpaneConstraints { alignment = Pos.TOP_LEFT; margin = Insets(20.0) }
     }
     override val root = stackpane {
@@ -37,7 +45,7 @@ class GameView : View() {
         shortcut(KeyCombination.valueOf("d")) { controller.makeMove('d') }
         shortcut(KeyCombination.valueOf("s")) { controller.makeMove('s') }
         shortcut(KeyCombination.valueOf("a")) { controller.makeMove('a') }
-        shortcut(KeyCombination.valueOf("Esc")) { replaceWith<MainView>(ViewTransition.Fade(0.3.seconds)) }
+        shortcut(KeyCombination.valueOf("Esc")) { controller.exitFromGameView() }
     }
 
     init {

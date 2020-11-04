@@ -6,6 +6,7 @@ import tornadofx.*
 
 class ExitView : View() {
     override val root = vbox {
+        addClass("setBackgroundFill")
         alignment = Pos.CENTER
         label("Are you sure want to quit?") { vboxConstraints { margin = Insets(20.0) } }
         hbox {
@@ -15,7 +16,7 @@ class ExitView : View() {
             button("No") {
                 shortcut("Esc") { replaceWith<MainMenuView>() }
                 hboxConstraints { margin = Insets(20.0) }
-            }.action { replaceWith<MainMenuView>() }
+            }.action { replaceWith<MainMenuView>(ViewTransition.Fade(0.3.seconds)) }
         }
     }
 }

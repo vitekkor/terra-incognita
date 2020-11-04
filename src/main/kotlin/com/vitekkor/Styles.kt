@@ -2,10 +2,12 @@ package com.vitekkor
 
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
+import javafx.scene.text.TextAlignment
 import tornadofx.*
 
 class Styles : Stylesheet() {
     companion object {
+        val setBackgroundFill by cssclass()
         val main by cssclass()
         val rules by cssclass()
         val mainFont = loadFont("/fonts/Super Maizen.otf", 32)!!
@@ -16,6 +18,9 @@ class Styles : Stylesheet() {
     }
 
     init {
+        setBackgroundFill {
+            backgroundColor = multi(colorOfBackground)
+        }
         label {
             font = mainFont
             fontSize = 20.px
@@ -43,6 +48,7 @@ class Styles : Stylesheet() {
         rules {
             font = mainFont
             fontSize = 16.px
+            textAlignment = TextAlignment.CENTER
         }
         s(comboBox, listCell) {
             baseColor = c("#05074F")
@@ -69,17 +75,16 @@ class Styles : Stylesheet() {
                 borderColor += box(Color.RED)
             }
         }
-        s(scrollPane, Stylesheet.listCell){
-            baseColor = c("#000000")
-            backgroundColor = multi(colorOfBackground)
+        s(scrollPane, Stylesheet.listCell) {
+            baseColor = Color.TRANSPARENT
             textFill = Paint.valueOf(colorOfText)
-            selectionBarText = Paint.valueOf(colorOfText)
             borderColor += box(colorOfBorder)
             backgroundRadius += box(radiusOfBorder)
             borderRadius += box(radiusOfBorder)
         }
         s(scrollBar) {
             baseColor = c("#05074F")
+            backgroundRadius += box(radiusOfBorder)
         }
     }
 }
