@@ -1,5 +1,6 @@
 package com.vitekkor.controller
 
+import com.vitekkor.Styles
 import com.vitekkor.model.core.*
 import com.vitekkor.model.core.labyrinth.GameMaster
 import com.vitekkor.model.core.labyrinth.Labyrinth
@@ -10,15 +11,18 @@ import com.vitekkor.view.MainMenuView
 import com.vitekkor.view.MainView
 import javafx.animation.Interpolator
 import javafx.scene.control.Alert
-import javafx.scene.control.Alert.AlertType
 import javafx.scene.control.ButtonType
-import javafx.scene.control.Dialog
 import javafx.scene.control.Tooltip
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.StackPane
+import javafx.scene.paint.Paint
+import javafx.scene.text.Font
 import javafx.scene.text.Text
+import javafx.scene.text.TextAlignment
+import javafx.stage.StageStyle
+import javafx.util.Duration
 import tornadofx.*
 import java.io.File
 import kotlin.properties.Delegates
@@ -32,8 +36,8 @@ class MyController : Controller() {
     private lateinit var labyrinth: Labyrinth
 
     //var backButton: Button? = null
-    fun loadLabyrinth(file: File? = null, size: Pair<Int, Int>? = null) {
-        if (file != null) {
+    fun loadLabyrinth(file: File? = null, size: Pair<Int, Int>? = null): Boolean {
+        return if (file != null) {
             load(file)
         } else {
             if (size != null) {
@@ -42,25 +46,25 @@ class MyController : Controller() {
                 load(localLabyrinth)
             } else {
                 showAlert("File is not selected")
+                false
             }
         }
     }
 
-    private fun load(file: File) {
+    private fun load(file: File): Boolean {
         try {
             labyrinth = Labyrinth.createFromFile(file)
+            return true
         } catch (e: IllegalArgumentException) {
             showAlert(e.message!!)
         } catch (e: IllegalStateException) {
             showAlert(e.message!!)
         }
+        return false
     }
+    private val howTo = File(resources.url("/error.txt").toURI()).readText()
 
     private fun showAlert(message: String) {
-        val alert = Alert(AlertType.ERROR)
-        alert.title = "Error"
-        alert.headerText = message
-
         val contentText = when {
             message == "Empty File" -> "File could not be empty"
             message.matches(Regex(""".*[Ww]ormhole.+""")) -> "The labyrinth can contain from 0 to 10 holes." +
@@ -80,13 +84,14 @@ class MyController : Controller() {
             message == "The labyrinth must contain at least one treasure" -> "The labyrinth must contain at least one treasure"
             else -> ""
         } + "\nTo view the correct formatting of the file hover over the icon"
-
-        val expContent = GridPane()
-        val text = Text(contentText)
-        text.wrapIn(expContent)
-        expContent.maxWidth = Double.MAX_VALUE
-        alert.dialogPane.content = expContent
-        //alert.graphic.onMouseEntered =
+        val alert = createDialog("Error", message, contentText, Alert.AlertType.ERROR)
+        alert.graphic = ImageView(Image(resources.stream("/error.png"))).apply {
+            tooltip(howTo) {
+                showDelay = 0.1.seconds
+                showDuration = Duration.INDEFINITE
+                font = Font.font("Consolas")
+            }
+        }
         alert.showAndWait()
     }
 
@@ -362,18 +367,11 @@ class MyController : Controller() {
     }
 
     private fun endGame(result: GameMaster.GameResult) {
-        val alert = Alert(AlertType.INFORMATION)
-        alert.title = "Game Result"
-        alert.headerText = if (result.exitReached) "You Win!" else "Game Over"
+        val headerText = if (result.exitReached) "You Win!" else "Game Over"
         val contentText = if (result.exitReached)
             "Congratulations! You made ${result.moves} moves, collected treasures, and reached the exit."
         else "Unfortunately, you lost. Try again."
-        val expContent = GridPane()
-        val text = Text(contentText)
-        text.wrapIn(expContent)
-        expContent.maxWidth = Double.MAX_VALUE
-        alert.dialogPane.content = expContent
-        //alert.graphic = ImageView()
+        val alert = createDialog("Game Result", headerText, contentText, Alert.AlertType.INFORMATION)
         val toGamePreView = ButtonType("Play another labyrinth")
         val playAgain = ButtonType("Play again")
         val toMainMenu = ButtonType("Menu")
@@ -418,16 +416,8 @@ class MyController : Controller() {
 //}
 
     fun exitFromGameView() {
-        val alert = Alert(AlertType.CONFIRMATION)
-        alert.title = "Exit"
-        alert.headerText = "Are you sure want to quit?"
         val contentText = "All your progress will be reset"
-        val expContent = GridPane()
-        val text = Text(contentText)
-        text.wrapIn(expContent)
-        expContent.maxWidth = Double.MAX_VALUE
-        alert.dialogPane.content = expContent
-        //alert.graphic = ImageView()
+        val alert = createDialog("Exit", "All your progress will be reset", contentText, Alert.AlertType.CONFIRMATION)
         val yes = ButtonType("Yes")
         val no = ButtonType("No")
         alert.buttonTypes.setAll(yes, no)
@@ -441,5 +431,23 @@ class MyController : Controller() {
                 alert.close()
             }
         }
+    }
+
+    private fun createDialog(title: String, headerText: String, contentText: String, alertType: Alert.AlertType): Alert {
+        val alert = Alert(alertType)
+        alert.initStyle(StageStyle.UNDECORATED)
+        alert.title = title
+        alert.headerText = headerText
+        val expContent = GridPane()
+        val text = Text(contentText)
+        text.fill = Paint.valueOf(Styles.colorOfText)
+        text.font = Styles.dialogFont
+        text.wrapIn(expContent)
+        expContent.maxWidth = Double.MAX_VALUE
+        alert.dialogPane.content = expContent
+        val dialogPane = alert.dialogPane
+        dialogPane.stylesheets.add(resources["/dialog.css"])
+        dialogPane.styleClass.add("notification")
+        return alert
     }
 }

@@ -13,6 +13,9 @@ import tornadofx.*
 class GameView : View() {
     private val controller: MyController by inject()
     private val movesLimitLabel = Label("").apply {
+        stackpaneConstraints { alignment = Pos.TOP_RIGHT; margin = Insets(20.0); marginTop = 40.0 }
+    }
+    private val playersName = Label("").apply {
         stackpaneConstraints { alignment = Pos.TOP_RIGHT; margin = Insets(20.0) }
     }
     private val terraLabel = Label("Terra Incognita").apply {
@@ -60,10 +63,15 @@ class GameView : View() {
         movesLimitLabel.text = "Moves left: $movesLeft"
     }
 
+    fun setPlayersName(name: String) {
+        playersName.text = name
+    }
+
     fun newGame() {
         root.clear()
         root.add(terraLabel)
         root.add(movesLimitLabel)
+        root.add(playersName)
         root.add(helpButton)
         val stackPane = controller.createMap()
         root.add(stackPane)

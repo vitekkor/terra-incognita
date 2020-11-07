@@ -1,7 +1,6 @@
 package com.vitekkor
 
 import com.vitekkor.controller.MyController
-import com.vitekkor.view.GameView
 import com.vitekkor.view.MainView
 import tornadofx.*
 

@@ -62,10 +62,12 @@ class GamePreView : Fragment() {
             alignment = Pos.CENTER
             button("Choose labyrinth from file").action {
                 file = chooseFile("Choose file", extensions, initialDirectory, FileChooserMode.Single)
-                defaultLabyrinth.removeFromParent()
-                fileLabel.text = "Chosen file: ${file[0].name}"
-                add(fileLabel.hboxConstraints { marginLeftRight(20.0) })
-                add(cancelButton)
+                if (file.isNotEmpty()) {
+                    defaultLabyrinth.removeFromParent()
+                    fileLabel.text = "Chosen file: ${file[0].name}"
+                    add(fileLabel.hboxConstraints { marginLeftRight(20.0) })
+                    add(cancelButton)
+                }
             }
         }
         button("Start") {
@@ -75,17 +77,21 @@ class GamePreView : Fragment() {
                     playerName.text.trim().isEmpty() -> playerName.addClass("error")
                     movesLimit.text.trim().isEmpty() || movesLimit.text.trim().toIntOrNull() == null -> movesLimit.addClass("error")
                     defaultLabyrinth.parent != null -> {
-                        controller.loadLabyrinth(size =
-                        comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())
-                        controller.moveLimit = movesLimit.text.toInt()
-                        mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
-                        gameView.newGame()
+                       if (controller.loadLabyrinth(size =
+                        comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
+                           controller.moveLimit = movesLimit.text.toInt()
+                           mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
+                           gameView.newGame()
+                           gameView.setPlayersName(playerName.text)
+                       }
                     }
                     else -> {
-                        controller.loadLabyrinth(file[0])
-                        controller.moveLimit = movesLimit.text.trim().toInt()
-                        mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
-                        gameView.newGame()
+                        if (controller.loadLabyrinth(file[0])) {
+                            controller.moveLimit = movesLimit.text.trim().toInt()
+                            mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
+                            gameView.newGame()
+                            gameView.setPlayersName(playerName.text)
+                        }
                     }
                 }
             }

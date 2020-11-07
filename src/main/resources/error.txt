@@ -1,0 +1,19 @@
+You can use only this characters:
+'#' - for wall
+' ' - for empty cell
+'S' - for entrance (there must be exactly one)
+'E' - for exit (there must be exactly one)
+'T' - for treasure (there must be at least one)
+numbers from 0 to 9 - for wormholes
+Their numbering should be continuous from zero to N-1,
+where N is their number.
+There can't be two wormholes with the same number.
+All labyrinths are rectangular, surrounded by walls on all sides.
+Maximum size 40 (width) x 25 (height), minimum 2 x 2
+(not counting the walls around it).
+Example:
+Labyrinth 5X2
+#######
+#S0# 1#
+#T # E#
+#######

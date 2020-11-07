@@ -9,12 +9,14 @@ class Styles : Stylesheet() {
     companion object {
         val setBackgroundFill by cssclass()
         val main by cssclass()
+        val notification by cssclass()
         val rules by cssclass()
-        val mainFont = loadFont("/fonts/Super Maizen.otf", 32)!!
+        val mainFont = loadFont("/fonts/Super_Maizen.otf", 32)!!
+        val dialogFont = loadFont("/fonts/Super_Maizen.otf", 16)!!
         private val colorOfBackground = c("#05071F")
         private val colorOfBorder = c("#2A73FF")
         private val radiusOfBorder = 20.0.px
-        private val colorOfText = "#e7e5e5"
+        val colorOfText = "#e7e5e5"
     }
 
     init {
@@ -85,6 +87,15 @@ class Styles : Stylesheet() {
         s(scrollBar) {
             baseColor = c("#05074F")
             backgroundRadius += box(radiusOfBorder)
+        }
+        tooltip {
+            textFill = Paint.valueOf(colorOfText)
+            borderColor += box(colorOfBorder)
+            borderRadius += box(radiusOfBorder)
+            backgroundColor = multi(colorOfBackground)
+            backgroundRadius += box(radiusOfBorder)
+            font = mainFont
+            fontSize = 16.px
         }
     }
 }
