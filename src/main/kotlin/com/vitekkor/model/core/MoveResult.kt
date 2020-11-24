@@ -5,8 +5,8 @@ class MoveResult(
         val room: Room,
         /** Condition after move (contains list of items and exit reaching flag) */
         val condition: Condition,
-        /** true if move was successful */
+        /** True if move was successful */
         val successful: Boolean,
-        /** status string (normally should not be analyzed) */
+        /** Status string (normally should not be analyzed) */
         val status: String
 )

@@ -20,6 +20,10 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
 
     data class GameResult(val moves: Int, val exitReached: Boolean)
 
+    /*/**The player makes moves until they reach the limit of moves
+     * @param moveLimit the limit of moves
+     * @return GameResult
+     * @see GameResult**/*/
     fun makeMoves(moveLimit: Int): GameResult {
         var wallCount = 0
         while (moves < moveLimit) {
@@ -33,10 +37,14 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
         }
         return GameResult(moves, exitReached = false)
     }
+
     fun addMoveToPath(move: Int) {
         playerPath[move] = playerLocation
     }
-
+    /*/** The player makes a move
+     * @return GameResult
+     * @see GameResult
+     * **/*/
     fun makeMove(): GameResult {
         if (playerCondition.exitReached) return GameResult(moves, exitReached = true)
         val moveResult = when (val move = player.getNextMove()) {
