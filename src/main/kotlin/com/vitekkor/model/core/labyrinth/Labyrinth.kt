@@ -20,6 +20,12 @@ class Labyrinth private constructor(val width: Int, val height: Int, private val
 
     private val exits: List<Location> = map.entries.filter { (_, room) -> room == Exit }.map { it.key }
 
+    private val treasures: List<Location> = map.entries.filter { (_, room) -> room is WithContent }.map { it.key }
+
+    fun recover(){
+        treasures.forEach { ((map[it] ?: error("")) as WithContent).content = Treasure }
+    }
+
     companion object {
         fun createFromFile(fileName: String) = createFromFile(File(fileName))
 

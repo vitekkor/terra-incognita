@@ -5,11 +5,16 @@ import com.vitekkor.model.core.*
 import com.vitekkor.model.core.labyrinth.GameMaster
 import com.vitekkor.model.core.labyrinth.Labyrinth
 import com.vitekkor.model.core.player.Human
+import com.vitekkor.model.core.player.Humanlike
+import com.vitekkor.model.core.player.Searcher
 import com.vitekkor.view.GamePreView
 import com.vitekkor.view.GameView
 import com.vitekkor.view.MainMenuView
 import com.vitekkor.view.MainView
 import javafx.animation.Interpolator
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.value.ObservableValue
+import javafx.scene.Scene
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
 import javafx.scene.control.Tooltip
@@ -17,14 +22,16 @@ import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.StackPane
+import javafx.scene.layout.VBox
 import javafx.scene.paint.Paint
 import javafx.scene.text.Font
 import javafx.scene.text.Text
-import javafx.scene.text.TextAlignment
 import javafx.stage.StageStyle
 import javafx.util.Duration
 import tornadofx.*
+import tornadofx.osgi.addViewsWhen
 import java.io.File
+import javax.swing.event.ChangeListener
 import kotlin.properties.Delegates
 
 
@@ -62,6 +69,7 @@ class MyController : Controller() {
         }
         return false
     }
+
     private val howTo = File(resources.url("/error.txt").toURI()).readText()
 
     private fun showAlert(message: String) {
@@ -298,16 +306,16 @@ class MyController : Controller() {
                             keyframe(0.67.seconds) {
                                 keyvalue(playerMovesAnimation.translateXProperty(), newX, Interpolator.EASE_BOTH)
                                 keyvalue(playerMovesAnimation.translateYProperty(), newY, Interpolator.EASE_BOTH)
-                                setOnFinished { moveNotMade = true }
+                                setOnFinished { moveNotMadeProperty.value = true }
                             }
                         }
-                    } else moveNotMade = true
+                    } else moveNotMadeProperty.value = true
                 }
             }
 
         } else {
             val pos = move.direction + playerLocation; map[pos.x to pos.y]!!.isVisible = true
-            moveNotMade = true
+            moveNotMadeProperty.value = true
         }
         if (!result.condition.exitReached) {
             val tooltip = Tooltip(result.status)
@@ -332,35 +340,32 @@ class MyController : Controller() {
     private lateinit var player: Human
     private lateinit var gameMaster: GameMaster
     var moveLimit by Delegates.notNull<Int>()
-    private var moveNotMade = true
+    private val moveNotMadeProperty = SimpleBooleanProperty(true)
+    private lateinit var moveResult: GameMaster.GameResult
 
-    fun makeMove(button: Char) {
-        if (moveNotMade) {
-            moveNotMade = false
-            player.setNextMove(when (button) {
-                'w' -> WalkMove(Direction.NORTH)
-                'd' -> WalkMove(Direction.EAST)
-                's' -> WalkMove(Direction.SOUTH)
-                'a' -> WalkMove(Direction.WEST)
-                else -> WaitMove
-            })
+    fun makeMove(direction: Direction) {
+        if (moveNotMadeProperty.value) {
+            moveNotMadeProperty.value = false
+            player.setNextMove(WalkMove(direction))
             val moves = gameMaster.moves
             var wallCount = 0
             if (moves < moveLimit) {
                 val oldMoves = gameMaster.moves
-                val moveResult = gameMaster.makeMove()
+                moveResult = gameMaster.makeMove()
                 val newMoves = gameMaster.moves
                 wallCount += if (oldMoves == newMoves) 1 else 0
                 if (wallCount >= 100) endGame(moveResult)
                 gameMaster.addMoveToPath(moves)
                 gameView.setMovesLeft(moveLimit - newMoves)
-                if (moveResult.exitReached) endGame(moveResult)
+                if (moveResult.exitReached && !notAHuman) endGame(moveResult)
             } else endGame(GameMaster.GameResult(moves, exitReached = false))
         }
     }
 
     fun startGame(): Int {
+        notAHuman = false
         player = Human()
+        labyrinth.recover()
         gameMaster = GameMaster(labyrinth, player)
         playerLocation = labyrinth.entrances[0]
         return moveLimit
@@ -389,7 +394,7 @@ class MyController : Controller() {
                 gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
             } // go to game settings
             toMainMenu -> {
-                mainView.root.center.replaceWith(mainMenuView.root, centerOnScreen = true)
+                mainView.root.center.replaceWith(mainMenuView.root)
                 gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
             } // go to menu
             tryAgain -> tryAgain() //reload game
@@ -449,5 +454,77 @@ class MyController : Controller() {
         dialogPane.stylesheets.add(resources["/dialog.css"])
         dialogPane.styleClass.add("notification")
         return alert
+    }
+
+    private var notAHuman = false
+    fun passLabyrinth() {
+        gameView.newGame()
+        val status = TaskStatus()
+        var result: Map<Int, Location> = emptyMap()
+        runAsync(status) {
+            labyrinth.recover()
+            result = Searcher.searchPath(labyrinth)
+        }
+        val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION)
+        val label = Text("").apply {
+            fill = Paint.valueOf(Styles.colorOfText)
+            font = Styles.dialogFont
+            visibleWhen { status.completed }
+        }
+        val vBox = VBox().apply {
+            progressbar(status.progress) {
+                visibleWhen { status.running }
+            }
+            add(label)
+            maxWidth = Double.MAX_VALUE
+        }
+        status.completed.addListener(ChangeListener { _, _, completed -> label.text = if (completed && result.isNotEmpty()) "Successful!\nPress Ok to show the pass" else "Couldn't solve the labyrinth..." })
+        alert.dialogPane.content = vBox
+        val ok = ButtonType("Ok")
+        alert.buttonTypes.clear()
+        alert.buttonTypes.add(ok)
+        val dialogResult = alert.showAndWait()
+        if (dialogResult.get() == ok && status.completed.value) {
+            notAHuman = true
+            alert.close()
+            labyrinth.recover()
+            playerLocation = labyrinth.entrances[0]
+            var previousLocation = result.getValue(0)
+            val movesList = mutableListOf<Direction>()
+            val taskStatus = TaskStatus().apply {
+                completed.addListener(ChangeListener { _, _, completed ->
+                    if (completed) {
+                        player = Humanlike(movesList)
+                        labyrinth.recover()
+                        gameMaster = GameMaster(labyrinth, player)
+                        playerLocation
+                        gameMaster.playerPath.entries.last().value
+                        makeMove((player.getNextMove() as WalkMove).direction)
+                        moveNotMadeProperty.addListener(ChangeListener { _, _, moveNotMade ->
+                            if (moveNotMade && notAHuman)
+                                if (!moveResult.exitReached) makeMove((player.getNextMove() as WalkMove).direction)
+                                else {
+                                    val dialog = createDialog(
+                                            "",
+                                            "That's it.",
+                                            "Here is the solution to the labyrinth. Click OK to exit",
+                                            Alert.AlertType.INFORMATION
+                                    )
+                                    dialog.buttonTypes.clear()
+                                    val okButton = ButtonType("Ok")
+                                    dialog.buttonTypes.add(okButton)
+                                    dialog.show()
+                                }
+                        })
+                    }
+                })
+            }
+            runAsync(taskStatus) {
+                for (i in 1 until result.size) {
+                    movesList.add(result.getValue(i).minus(previousLocation))
+                    previousLocation = result.getValue(i)
+                }
+            }
+        }
     }
 }

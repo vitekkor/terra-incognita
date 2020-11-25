@@ -4,12 +4,12 @@ import com.vitekkor.controller.MyController
 import com.vitekkor.model.core.*
 import tornadofx.*
 
-class Human : AbstractPlayer() {
+open class Human : AbstractPlayer() {
     private val appController = find(MyController::class)
-    var move: Move = WaitMove
+    protected open var move: Move = WaitMove
     override fun getNextMove(): Move = move
 
-    fun setNextMove(newMove: Move) {
+    open fun setNextMove(newMove: Move) {
         move = newMove
     }
 

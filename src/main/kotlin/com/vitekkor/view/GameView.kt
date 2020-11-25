@@ -1,6 +1,7 @@
 package com.vitekkor.view
 
 import com.vitekkor.controller.MyController
+import com.vitekkor.model.core.Direction
 import javafx.geometry.Insets
 import javafx.geometry.Pos
 import javafx.scene.control.*
@@ -24,30 +25,16 @@ class GameView : View() {
     }
     private val helpButton = Button("Help").apply {
         action {
-            val tooltip = Tooltip("Help")
-            tooltip.opacity = 0.0
-            tooltip.show(this@GameView.currentWindow)
-            tooltip.opacityProperty().animate(1.0, 0.5.seconds) {
-                setOnFinished {
-                    timeline(true) {
-                        keyframe(0.5.seconds) {}
-                        setOnFinished {
-                            tooltip.opacityProperty().animate(0.0, 0.5.seconds) {
-                                setOnFinished { tooltip.hide() }
-                            }
-                        }
-                    }
-                }
-            }
+            controller.passLabyrinth()
         }
         stackpaneConstraints { alignment = Pos.TOP_LEFT; margin = Insets(20.0) }
     }
     override val root = stackpane {
         background = Background(BackgroundFill(Color.BLACK, CornerRadii.EMPTY, Insets.EMPTY))
-        shortcut(KeyCombination.valueOf("w")) { controller.makeMove('w') }
-        shortcut(KeyCombination.valueOf("d")) { controller.makeMove('d') }
-        shortcut(KeyCombination.valueOf("s")) { controller.makeMove('s') }
-        shortcut(KeyCombination.valueOf("a")) { controller.makeMove('a') }
+        shortcut(KeyCombination.valueOf("w")) { controller.makeMove(Direction.NORTH) }
+        shortcut(KeyCombination.valueOf("d")) { controller.makeMove(Direction.EAST) }
+        shortcut(KeyCombination.valueOf("s")) { controller.makeMove(Direction.SOUTH) }
+        shortcut(KeyCombination.valueOf("a")) { controller.makeMove(Direction.WEST) }
         shortcut(KeyCombination.valueOf("Esc")) { controller.exitFromGameView() }
     }
 

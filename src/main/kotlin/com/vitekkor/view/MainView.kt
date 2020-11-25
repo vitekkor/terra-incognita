@@ -1,6 +1,7 @@
 package com.vitekkor.view
 
 import com.vitekkor.Styles
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.geometry.Pos
 import javafx.scene.input.KeyCombination
 import javafx.scene.paint.Paint
@@ -9,6 +10,7 @@ import java.awt.Color
 
 class MainView : View("Terra Incognita") {
     private val menu = find(MainMenuView::class)
+    private val b = SimpleBooleanProperty(true)
 
     /*private val backButton: Button = button("Back") {
         //isVisible = false
