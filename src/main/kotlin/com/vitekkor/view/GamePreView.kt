@@ -79,7 +79,8 @@ class GamePreView : Fragment() {
                     defaultLabyrinth.parent != null -> {
                        if (controller.loadLabyrinth(size =
                         comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
-                           controller.moveLimit = movesLimit.text.toInt()
+                           controller.moveLimit = movesLimit.text.trim().toInt()
+                           controller.name = playerName.text
                            mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
                            gameView.newGame()
                            gameView.setPlayersName(playerName.text)
@@ -88,6 +89,7 @@ class GamePreView : Fragment() {
                     else -> {
                         if (controller.loadLabyrinth(file[0])) {
                             controller.moveLimit = movesLimit.text.trim().toInt()
+                            controller.name = playerName.text
                             mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
                             gameView.newGame()
                             gameView.setPlayersName(playerName.text)
@@ -105,7 +107,7 @@ class GamePreView : Fragment() {
         movesLimit.textProperty().addListener { _, _, _ -> movesLimit.removeClass("error") }
         runAsync {
             length = List(39) { min++ }
-            wide = length.subList(0, 23)
+            wide = length.subList(0, 24)
             selectedItem1 = SimpleIntegerProperty(length.first())
             selectedItem2 = SimpleIntegerProperty(wide.first())
         } ui {

@@ -1,10 +1,42 @@
 package com.vitekkor.model.core.labyrinth
 
-import java.util.*
 import com.vitekkor.model.core.*
 import com.vitekkor.model.core.player.Player
+import java.util.*
 
-class GameMaster(private val lab: Labyrinth, private val player: Player) {
+class GameMaster(private var lab: Labyrinth, private var player: Player) {
+
+    fun reload() {
+        lab.recover()
+        moves = 0
+        playerLocation = lab.entrances.let {
+            it[random.nextInt(it.size)]
+        }.apply {
+            player.setStartLocationAndSize(this, lab.width, lab.height)
+        }
+        playerCondition = Condition()
+        playerMoves.clear()
+    }
+
+    fun setNewPlayer(newPlayer: Player): Boolean {
+        var res = false
+        if (newPlayer != player) {
+            player = newPlayer
+            res = false
+        }
+        reload()
+        return res
+    }
+
+    fun setNewLabyrinth(newLabyrinth: Labyrinth): Boolean {
+        var res = false
+        if (newLabyrinth != lab) {
+            lab = newLabyrinth
+            res = true
+        }
+        reload()
+        return res
+    }
 
     private var playerLocation = lab.entrances.let {
         it[random.nextInt(it.size)]
@@ -16,7 +48,7 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
 
     var moves = 0
 
-    internal val playerPath = mutableMapOf(0 to playerLocation)
+    internal val playerMoves = mutableListOf<Move>()
 
     data class GameResult(val moves: Int, val exitReached: Boolean)
 
@@ -32,22 +64,19 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
             val newMoves = moves
             wallCount = if (oldMoves == newMoves) wallCount + 1 else 0
             if (wallCount >= 100) return moveResult
-            playerPath[moves] = playerLocation
             if (moveResult.exitReached) return moveResult
         }
         return GameResult(moves, exitReached = false)
     }
 
-    fun addMoveToPath(move: Int) {
-        playerPath[move] = playerLocation
-    }
     /*/** The player makes a move
      * @return GameResult
      * @see GameResult
      * **/*/
     fun makeMove(): GameResult {
         if (playerCondition.exitReached) return GameResult(moves, exitReached = true)
-        val moveResult = when (val move = player.getNextMove()) {
+        val move = player.getNextMove()
+        val moveResult = when (move) {
             WaitMove -> {
                 MoveResult(lab[playerLocation], playerCondition, true, "Nothing changes")
             }
@@ -79,7 +108,7 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
                         }
                     }
                     is Wormhole -> {
-                        newLocation = lab.wormholeMap[newLocation]!!
+                        newLocation = lab.wormholeMap.getValue(newLocation)
                         true to "Fall into wormhole!"
                     }
                 }
@@ -90,6 +119,7 @@ class GameMaster(private val lab: Labyrinth, private val player: Player) {
         player.setMoveResult(moveResult)
         if (moveResult.successful) {
             moves++
+            playerMoves.add(move)
         }
         return GameResult(moves, playerCondition.exitReached)
     }

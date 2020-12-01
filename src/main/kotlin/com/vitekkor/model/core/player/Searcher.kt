@@ -2,8 +2,8 @@ package com.vitekkor.model.core.player
 
 import com.vitekkor.model.core.*
 import com.vitekkor.model.core.labyrinth.GameMaster
-import com.vitekkor.model.core.labyrinth.Labyrinth
 import com.vitekkor.model.core.labyrinth.GameMaster.Companion.random
+import com.vitekkor.model.core.labyrinth.Labyrinth
 
 class Searcher : AbstractPlayer() {
     private val wayToExit = mutableListOf<Direction>()
@@ -24,8 +24,10 @@ class Searcher : AbstractPlayer() {
             if (wayToExit.isEmpty()) {
                 wayToExit.addAll(findPathToExit(currentLocation)!!)
             }
-            lastDirection = wayToExit.first()
-            wayToExit.removeAt(0)
+            if (wayToExit.isNotEmpty()){
+                lastDirection = wayToExit.first()
+                wayToExit.removeAt(0)
+            }
         } else {
             val possibleDirections = Direction.values().filter { !map.contains(it + currentLocation) }.toMutableList()
             if (possibleDirections.isEmpty()) possibleDirections.addAll(Direction.values())
@@ -72,15 +74,19 @@ class Searcher : AbstractPlayer() {
     }
 
     companion object {
-        fun searchPath(labyrinth: Labyrinth): Map<Int, Location> {
+        fun searchPath(labyrinth: Labyrinth): List<Move> {
             val searcher = Searcher()
+            val gameMaster = GameMaster(labyrinth, searcher)
             for (i in 1..1000) {
                 searcher.reload()
-                val gameMaster = GameMaster(labyrinth, searcher)
+                gameMaster.reload()
                 val result = gameMaster.makeMoves(1000)
-                if (result.exitReached) return gameMaster.playerPath
+                if (result.exitReached) {
+                    searcher.reload()
+                    return gameMaster.playerMoves
+                }
             }
-            return emptyMap()
+            return emptyList()
         }
     }
 }

@@ -13,8 +13,6 @@ import com.vitekkor.view.MainMenuView
 import com.vitekkor.view.MainView
 import javafx.animation.Interpolator
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.value.ObservableValue
-import javafx.scene.Scene
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
 import javafx.scene.control.Tooltip
@@ -29,9 +27,7 @@ import javafx.scene.text.Text
 import javafx.stage.StageStyle
 import javafx.util.Duration
 import tornadofx.*
-import tornadofx.osgi.addViewsWhen
 import java.io.File
-import javax.swing.event.ChangeListener
 import kotlin.properties.Delegates
 
 
@@ -71,6 +67,7 @@ class MyController : Controller() {
     }
 
     private val howTo = File(resources.url("/error.txt").toURI()).readText()
+    private var errorAlert: Alert? = null
 
     private fun showAlert(message: String) {
         val contentText = when {
@@ -92,15 +89,20 @@ class MyController : Controller() {
             message == "The labyrinth must contain at least one treasure" -> "The labyrinth must contain at least one treasure"
             else -> ""
         } + "\nTo view the correct formatting of the file hover over the icon"
-        val alert = createDialog("Error", message, contentText, Alert.AlertType.ERROR)
-        alert.graphic = ImageView(Image(resources.stream("/error.png"))).apply {
-            tooltip(howTo) {
-                showDelay = 0.1.seconds
-                showDuration = Duration.INDEFINITE
-                font = Font.font("Consolas")
+        if (errorAlert == null) {
+            errorAlert = createDialog("Error", message, contentText, Alert.AlertType.ERROR)
+            errorAlert!!.graphic = ImageView(Image(resources.stream("/error.png"))).apply {
+                tooltip(howTo) {
+                    showDelay = 0.1.seconds
+                    showDuration = Duration.INDEFINITE
+                    font = Font.font("Consolas")
+                }
             }
+        } else {
+            errorAlert!!.headerText = message
+            errorAlert!!.contentText = contentText
         }
-        alert.showAndWait()
+        errorAlert!!.showAndWait()
     }
 
     private lateinit var frontWall: Image
@@ -128,7 +130,7 @@ class MyController : Controller() {
         emptyCell = Image(resources.stream("/tiles/empty_cell1.png"))
         wormhole = Image(resources.stream("/tiles/wormhole.png"))
         treasure = Image(resources.stream("/tiles/treasure.png"))
-        treasureCollected = Image(resources.stream("/tiles/treasure_collected.png"))
+        //treasureCollected = Image(resources.stream("/tiles/treasure_collected.png"))
         entrance1 = Image(resources.stream("/tiles/entrance1.png"))
         entrance2 = Image(resources.stream("/tiles/entrance2.png"))
         exit1 = Image(resources.stream("/tiles/exit1.png"))
@@ -167,28 +169,29 @@ class MyController : Controller() {
     private val map = mutableMapOf<Pair<Int, Int>, ImageView>()
 
     fun createMap(): StackPane {
+        map.clear()
         val playerStackPane = StackPane()
         val stackPane = StackPane()
         fun getStartOrExit(entrance: Boolean, x: Int, y: Int): ImageView {
             val number = if (labyrinth[x, y + 1] is Empty || labyrinth[x, y - 1] is Empty) 1 else 2
             val tileName = if (entrance) "entrance" else "exit"
             val tile = getTile("$tileName$number")
-            tile.translateX = x * 66.0 - 39.0 * y
-            tile.translateY = x * 20.3 + 37.0 * y
+            tile.translateX = x * DX_X - DY_X * y
+            tile.translateY = x * DX_Y + DY_Y * y
             return tile
         }
 
         fun getEmptyCell(x: Int, y: Int): ImageView {
             val tile = getTile(labyrinth[x, y].toString())
-            tile.translateX = x * 66.0 - 39.0 * y
-            tile.translateY = x * 20.3 + 37.0 * y
+            tile.translateX = x * DX_X - DY_X * y
+            tile.translateY = x * DX_Y + DY_Y * y
             return tile
         }
 
         for (i in 0 until labyrinth.width) {
             val rearWall = getTile("rear_wall")
-            rearWall.translateX = i * 66.0 + 39.0
-            rearWall.translateY = i * 20.3 - 37.0
+            rearWall.translateX = i * DX_X + DY_X
+            rearWall.translateY = i * DX_Y - DY_Y
             stackPane.add(rearWall)
             map[i to -1] = rearWall
         }
@@ -196,23 +199,23 @@ class MyController : Controller() {
             for (j in 0 until labyrinth.width) {
                 if (j == 0) {
                     val leftWall = getTile("left_wall1")
-                    leftWall.translateX = -66.0 - 39.0 * i
-                    leftWall.translateY = -20.3 + 37.0 * i
+                    leftWall.translateX = -DX_X - DY_X * i
+                    leftWall.translateY = -DX_Y + DY_Y * i
                     stackPane.add(leftWall)
                     map[-1 to i] = leftWall
                 }
                 when (labyrinth[j, i].toString()) {
                     "wall" -> {
                         val wall = getTile("left_wall")
-                        wall.translateX = j * 66.0 - 39.0 * i
-                        wall.translateY = j * 20.3 + 37.0 * i
+                        wall.translateX = j * DX_X - DY_X * i
+                        wall.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(wall)
                         map[j to i] = wall
                     }
                     "treasure" -> {
                         val treasure = getTile("treasure")
-                        treasure.translateX = j * 66.0 - 39.0 * i
-                        treasure.translateY = j * 20.3 + 37.0 * i
+                        treasure.translateX = j * DX_X - DY_X * i
+                        treasure.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(treasure)
                         map[j to i] = treasure
                     }
@@ -223,8 +226,8 @@ class MyController : Controller() {
                     }
                     "wormhole" -> {
                         val wormhole = getTile("wormhole")
-                        wormhole.translateX = j * 66.0 - 39.0 * i
-                        wormhole.translateY = j * 20.3 + 37.0 * i
+                        wormhole.translateX = j * DX_X - DY_X * i
+                        wormhole.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(wormhole)
                         map[j to i] = wormhole
                     }
@@ -248,15 +251,15 @@ class MyController : Controller() {
                 }
             }
             val wall = getTile("right_wall")
-            wall.translateX = 66.0 * labyrinth.width - 39.0 * i
-            wall.translateY = 20.3 * labyrinth.width + 37.0 * i
+            wall.translateX = DX_X * labyrinth.width - DY_X * i
+            wall.translateY = DX_Y * labyrinth.width + DY_Y * i
             stackPane.add(wall)
             map[labyrinth.width to i] = wall
         }
         for (i in 0 until labyrinth.width) {
             val frontWall = getTile("front_wall")
-            frontWall.translateX = i * 66.0 - 39.0 * labyrinth.height
-            frontWall.translateY = i * 20.3 + 37.0 * labyrinth.height
+            frontWall.translateX = i * DX_X - DY_X * labyrinth.height
+            frontWall.translateY = i * DX_Y + DY_Y * labyrinth.height
             stackPane.add(frontWall)
             map[i to labyrinth.height] = frontWall
         }
@@ -268,24 +271,24 @@ class MyController : Controller() {
     private lateinit var playerLocation: Location
 
     fun showMoveResult(result: MoveResult) {
-        val move: WalkMove = player.getNextMove() as WalkMove
+        val move: WalkMove = player!!.getNextMove() as WalkMove
         if (result.successful) {
             val (x, y) = when (move.direction) {
                 Direction.NORTH -> {
                     playerLocation = playerLocation.copy(y = playerLocation.y - 1)
-                    39.0 to -37.0
+                    DY_X to -DY_Y
                 }
                 Direction.EAST -> {
                     playerLocation = playerLocation.copy(x = playerLocation.x + 1)
-                    66.0 to 20.3
+                    DX_X to DX_Y
                 }
                 Direction.SOUTH -> {
                     playerLocation = playerLocation.copy(y = playerLocation.y + 1)
-                    -39.0 to 37.0
+                    -DY_X to DY_Y
                 }
                 Direction.WEST -> {
                     playerLocation = playerLocation.copy(x = playerLocation.x - 1)
-                    -66.0 to -20.3
+                    -DX_X to -DX_Y
                 }
             }
             map[playerLocation.x to playerLocation.y]!!.isVisible = true
@@ -299,8 +302,8 @@ class MyController : Controller() {
                         val newXOldX = labyrinth.wormholeMap.getValue(playerLocation).x - playerLocation.x
                         val newYOldY = labyrinth.wormholeMap.getValue(playerLocation).y - playerLocation.y
                         playerLocation = labyrinth.wormholeMap.getValue(playerLocation)
-                        val newX = playerMovesAnimation.translateX + newXOldX * 66.0 - newYOldY * 39.0
-                        val newY = playerMovesAnimation.translateY + newYOldY * 37.0 + newXOldX * 20.3
+                        val newX = playerMovesAnimation.translateX + newXOldX * DX_X - newYOldY * DY_X
+                        val newY = playerMovesAnimation.translateY + newYOldY * DY_Y + newXOldX * DX_Y
                         map[playerLocation.x to playerLocation.y]!!.isVisible = true
                         timeline(true) {
                             keyframe(0.67.seconds) {
@@ -337,25 +340,31 @@ class MyController : Controller() {
     }
 
 
-    private lateinit var player: Human
-    private lateinit var gameMaster: GameMaster
+    private var player: Human? = null
+    private var gameMaster: GameMaster? = null
     var moveLimit by Delegates.notNull<Int>()
-    private val moveNotMadeProperty = SimpleBooleanProperty(true)
+    lateinit var name: String
+    private val moveNotMadeProperty = SimpleBooleanProperty(true).apply {
+        addListener(ChangeListener { _, _, moveNotMade ->
+            if (moveNotMade && notAHuman)
+                if (!moveResult.exitReached) makeMove((player!!.getNextMove() as WalkMove).direction)
+                else displayPassageCompleted()
+        })
+    }
     private lateinit var moveResult: GameMaster.GameResult
 
     fun makeMove(direction: Direction) {
         if (moveNotMadeProperty.value) {
             moveNotMadeProperty.value = false
-            player.setNextMove(WalkMove(direction))
-            val moves = gameMaster.moves
+            if (!notAHuman) player!!.setNextMove(WalkMove(direction))
+            val moves = gameMaster!!.moves
             var wallCount = 0
             if (moves < moveLimit) {
-                val oldMoves = gameMaster.moves
-                moveResult = gameMaster.makeMove()
-                val newMoves = gameMaster.moves
+                val oldMoves = gameMaster!!.moves
+                moveResult = gameMaster!!.makeMove()
+                val newMoves = gameMaster!!.moves
                 wallCount += if (oldMoves == newMoves) 1 else 0
                 if (wallCount >= 100) endGame(moveResult)
-                gameMaster.addMoveToPath(moves)
                 gameView.setMovesLeft(moveLimit - newMoves)
                 if (moveResult.exitReached && !notAHuman) endGame(moveResult)
             } else endGame(GameMaster.GameResult(moves, exitReached = false))
@@ -364,9 +373,12 @@ class MyController : Controller() {
 
     fun startGame(): Int {
         notAHuman = false
-        player = Human()
+        if (player == null) player = Human()
         labyrinth.recover()
-        gameMaster = GameMaster(labyrinth, player)
+        if (gameMaster == null) gameMaster = GameMaster(labyrinth, player!!) else {
+            gameMaster!!.setNewLabyrinth(labyrinth)
+            gameMaster!!.setNewPlayer(player!!)
+        }
         playerLocation = labyrinth.entrances[0]
         return moveLimit
     }
@@ -405,20 +417,6 @@ class MyController : Controller() {
     private fun tryAgain() {
         gameView.newGame()
     }
-//ViewTransition.Slide(0.3.seconds, ViewTransition.Direction.LEFT)
-//progressbar {
-//    thread {
-//        for (i in 1..100) {
-//            Platform.runLater { progress = i.toDouble() / 100.0 }
-//            Thread.sleep(100)
-//        }
-//    }
-//}
-//progressbar(completion) {
-//    progressProperty().addListener {
-//        obsVal, old, new ->  print("VALUE: $new")
-//    }
-//}
 
     fun exitFromGameView() {
         val contentText = "All your progress will be reset"
@@ -426,6 +424,8 @@ class MyController : Controller() {
         val yes = ButtonType("Yes")
         val no = ButtonType("No")
         alert.buttonTypes.setAll(yes, no)
+        val isHuman = notAHuman
+        notAHuman = false
         val dialogResult = alert.showAndWait()
         when (dialogResult.get()) {
             yes -> {
@@ -434,6 +434,9 @@ class MyController : Controller() {
             }
             no -> {
                 alert.close()
+                notAHuman = isHuman
+                moveNotMadeProperty.value = false
+                moveNotMadeProperty.value = true
             }
         }
     }
@@ -460,7 +463,7 @@ class MyController : Controller() {
     fun passLabyrinth() {
         gameView.newGame()
         val status = TaskStatus()
-        var result: Map<Int, Location> = emptyMap()
+        var result: List<Move> = emptyList()
         runAsync(status) {
             labyrinth.recover()
             result = Searcher.searchPath(labyrinth)
@@ -478,53 +481,70 @@ class MyController : Controller() {
             add(label)
             maxWidth = Double.MAX_VALUE
         }
-        status.completed.addListener(ChangeListener { _, _, completed -> label.text = if (completed && result.isNotEmpty()) "Successful!\nPress Ok to show the pass" else "Couldn't solve the labyrinth..." })
+        status.completed.addListener(ChangeListener { _, _, completed ->
+            label.text = if (completed && result.isNotEmpty()) "Successful!\nPress Ok to show the pass"
+            else "Couldn't solve the labyrinth..."
+        })
         alert.dialogPane.content = vBox
-        val ok = ButtonType("Ok")
-        alert.buttonTypes.clear()
-        alert.buttonTypes.add(ok)
         val dialogResult = alert.showAndWait()
-        if (dialogResult.get() == ok && status.completed.value) {
-            notAHuman = true
-            alert.close()
-            labyrinth.recover()
-            playerLocation = labyrinth.entrances[0]
-            var previousLocation = result.getValue(0)
-            val movesList = mutableListOf<Direction>()
-            val taskStatus = TaskStatus().apply {
-                completed.addListener(ChangeListener { _, _, completed ->
-                    if (completed) {
-                        player = Humanlike(movesList)
-                        labyrinth.recover()
-                        gameMaster = GameMaster(labyrinth, player)
-                        playerLocation
-                        gameMaster.playerPath.entries.last().value
-                        makeMove((player.getNextMove() as WalkMove).direction)
-                        moveNotMadeProperty.addListener(ChangeListener { _, _, moveNotMade ->
-                            if (moveNotMade && notAHuman)
-                                if (!moveResult.exitReached) makeMove((player.getNextMove() as WalkMove).direction)
-                                else {
-                                    val dialog = createDialog(
-                                            "",
-                                            "That's it.",
-                                            "Here is the solution to the labyrinth. Click OK to exit",
-                                            Alert.AlertType.INFORMATION
-                                    )
-                                    dialog.buttonTypes.clear()
-                                    val okButton = ButtonType("Ok")
-                                    dialog.buttonTypes.add(okButton)
-                                    dialog.show()
-                                }
-                        })
-                    }
-                })
-            }
-            runAsync(taskStatus) {
-                for (i in 1 until result.size) {
-                    movesList.add(result.getValue(i).minus(previousLocation))
-                    previousLocation = result.getValue(i)
+        fun showPath() {
+            if (status.completed.value) {
+                alert.close()
+                if (result.isNotEmpty()) {
+                    notAHuman = true
+                    playerLocation = labyrinth.entrances[0]
+                    player = Humanlike(result)
+                    gameMaster!!.setNewPlayer(player!!)
+                    makeMove((player!!.getNextMove() as WalkMove).direction)
                 }
             }
         }
+        try {
+            if (dialogResult.get().text == "OK") showPath()
+        } catch (e: NoSuchElementException) {
+           showPath()
+        }
+
+    }
+
+    private var displayPassageCompletedDialog: Alert? = null
+    private fun displayPassageCompleted() {
+        if (displayPassageCompletedDialog == null) {
+            displayPassageCompletedDialog = createDialog(
+                    "",
+                    "That's it.",
+                    "Here is the solution to the labyrinth. Click OK to exit",
+                    Alert.AlertType.INFORMATION
+            )
+        }
+        val taskStatus = TaskStatus().apply {
+            this.completed.addListener(ChangeListener { _, _, completed ->
+                if (completed && displayPassageCompletedDialog!!.result.text == "OK") {
+                    displayPassageCompletedDialog!!.close()
+                    mainView.root.center.replaceWith(gamePreView.root)
+                    gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
+                }
+            })
+        }
+        displayPassageCompletedDialog!!.show()
+        displayPassageCompletedDialog!!.result = null
+        runAsync(taskStatus) {
+            while (displayPassageCompletedDialog!!.result == null) {
+            }
+        }
+    }
+
+    companion object {
+        /**X offset for x (66.0)**/
+        private const val DX_X = 66.0
+
+        /**X offset for y (20.3)**/
+        private const val DX_Y = 20.3
+
+        /**Y offset for x (39.0)**/
+        private const val DY_X = 39.0
+
+        /**Y offset for y (37.0)**/
+        private const val DY_Y = 37.0
     }
 }
