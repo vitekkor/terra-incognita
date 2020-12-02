@@ -74,7 +74,7 @@ class Searcher : AbstractPlayer() {
     }
 
     companion object {
-        fun searchPath(labyrinth: Labyrinth): List<Move> {
+        fun searchPath(labyrinth: Labyrinth, moveLimit: Int): List<Move> {
             val searcher = Searcher()
             val gameMaster = GameMaster(labyrinth, searcher)
             for (i in 1..1000) {
@@ -83,6 +83,7 @@ class Searcher : AbstractPlayer() {
                 val result = gameMaster.makeMoves(1000)
                 if (result.exitReached) {
                     searcher.reload()
+                    if (gameMaster.playerMoves.size <= moveLimit)
                     return gameMaster.playerMoves
                 }
             }

@@ -4,11 +4,14 @@ import com.vitekkor.controller.MyController
 import com.vitekkor.model.core.Direction
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.control.*
+import javafx.scene.control.Button
+import javafx.scene.control.Label
 import javafx.scene.input.KeyCombination
-import javafx.scene.layout.*
+import javafx.scene.layout.Background
+import javafx.scene.layout.BackgroundFill
+import javafx.scene.layout.CornerRadii
+import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
-import javafx.scene.text.Text
 import tornadofx.*
 
 class GameView : View() {
@@ -36,14 +39,6 @@ class GameView : View() {
         shortcut(KeyCombination.valueOf("s")) { controller.makeMove(Direction.SOUTH) }
         shortcut(KeyCombination.valueOf("a")) { controller.makeMove(Direction.WEST) }
         shortcut(KeyCombination.valueOf("Esc")) { controller.exitFromGameView() }
-    }
-
-    init {
-        val stackPane = controller.createMap()
-        root.add(stackPane)
-        stackPane.toBack()
-        movableAndZoomableStackpane(stackPane)
-        movesLimitLabel.text = "Moves left: ${controller.startGame()}"
     }
 
     fun setMovesLeft(movesLeft: Int) {

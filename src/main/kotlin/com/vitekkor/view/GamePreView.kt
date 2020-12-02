@@ -24,7 +24,10 @@ class GamePreView : Fragment() {
     private lateinit var comboboxWidth: ComboBox<Number>
     private lateinit var comboboxHeight: ComboBox<Number>
     private lateinit var defaultLabyrinth: HBox
-    private val movesLimit = textfield("1000") { hboxConstraints { marginLeftRight(20.0) } }
+    private val movesLimit = textfield("1000") {
+        hboxConstraints { marginLeftRight(20.0) }
+        style += "-fx-text-fill: #e7e5e5"
+    }
     private val movesLimitHBox = hbox {
         alignment = Pos.CENTER
         hboxConstraints { margin = Insets(20.0) }
@@ -43,7 +46,10 @@ class GamePreView : Fragment() {
         }
     }
     private val fileLabel = label()
-    private val playerName = textfield("Name") { hboxConstraints { marginLeftRight(20.0) } }
+    private val playerName = textfield("Name") {
+        hboxConstraints { marginLeftRight(20.0) }
+        style += "-fx-text-fill: #e7e5e5"
+    }
 
 
     override val root = vbox {
@@ -77,14 +83,14 @@ class GamePreView : Fragment() {
                     playerName.text.trim().isEmpty() -> playerName.addClass("error")
                     movesLimit.text.trim().isEmpty() || movesLimit.text.trim().toIntOrNull() == null -> movesLimit.addClass("error")
                     defaultLabyrinth.parent != null -> {
-                       if (controller.loadLabyrinth(size =
-                        comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
-                           controller.moveLimit = movesLimit.text.trim().toInt()
-                           controller.name = playerName.text
-                           mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
-                           gameView.newGame()
-                           gameView.setPlayersName(playerName.text)
-                       }
+                        if (controller.loadLabyrinth(size =
+                                comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
+                            controller.moveLimit = movesLimit.text.trim().toInt()
+                            controller.name = playerName.text
+                            mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
+                            gameView.newGame()
+                            gameView.setPlayersName(playerName.text)
+                        }
                     }
                     else -> {
                         if (controller.loadLabyrinth(file[0])) {
@@ -122,5 +128,13 @@ class GamePreView : Fragment() {
             }
             emptyHBox.add(defaultLabyrinth)
         }
+    }
+
+    override fun onDock() {
+        super.onDock()
+        movesLimit.text = controller.moveLimit.toString()
+        playerName.text = controller.name
+        playerName.style += "-fx-text-fill: #e7e5e5"
+        movesLimit.style += "-fx-text-fill: #e7e5e5"
     }
 }

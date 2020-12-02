@@ -28,7 +28,6 @@ import javafx.stage.StageStyle
 import javafx.util.Duration
 import tornadofx.*
 import java.io.File
-import kotlin.properties.Delegates
 
 
 class MyController : Controller() {
@@ -342,12 +341,13 @@ class MyController : Controller() {
 
     private var player: Human? = null
     private var gameMaster: GameMaster? = null
-    var moveLimit by Delegates.notNull<Int>()
-    lateinit var name: String
+    var moveLimit = 1000
+    var name = "Player"
     private val moveNotMadeProperty = SimpleBooleanProperty(true).apply {
         addListener(ChangeListener { _, _, moveNotMade ->
             if (moveNotMade && notAHuman)
-                if (!moveResult.exitReached) makeMove((player!!.getNextMove() as WalkMove).direction)
+                if (!moveResult.exitReached)
+                    makeMove((player!!.getNextMove() as WalkMove).direction)
                 else displayPassageCompleted()
         })
     }
@@ -416,6 +416,8 @@ class MyController : Controller() {
 
     private fun tryAgain() {
         gameView.newGame()
+        moveNotMadeProperty.value = true
+        notAHuman = false
     }
 
     fun exitFromGameView() {
@@ -461,12 +463,13 @@ class MyController : Controller() {
 
     private var notAHuman = false
     fun passLabyrinth() {
+        notAHuman = false
         gameView.newGame()
         val status = TaskStatus()
         var result: List<Move> = emptyList()
         runAsync(status) {
             labyrinth.recover()
-            result = Searcher.searchPath(labyrinth)
+            result = Searcher.searchPath(labyrinth, moveLimit)
         }
         val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION)
         val label = Text("").apply {
@@ -491,6 +494,7 @@ class MyController : Controller() {
             if (status.completed.value) {
                 alert.close()
                 if (result.isNotEmpty()) {
+                    moveNotMadeProperty.value = true
                     notAHuman = true
                     playerLocation = labyrinth.entrances[0]
                     player = Humanlike(result)
@@ -526,8 +530,8 @@ class MyController : Controller() {
                 }
             })
         }
-        displayPassageCompletedDialog!!.show()
         displayPassageCompletedDialog!!.result = null
+        displayPassageCompletedDialog!!.show()
         runAsync(taskStatus) {
             while (displayPassageCompletedDialog!!.result == null) {
             }
