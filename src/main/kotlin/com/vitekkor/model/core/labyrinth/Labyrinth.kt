@@ -2,10 +2,8 @@ package com.vitekkor.model.core.labyrinth
 
 import com.vitekkor.model.core.*
 import java.io.File
-import java.lang.IllegalArgumentException
-import kotlin.error
 
-class Labyrinth private constructor(val width: Int, val height: Int, private val map: Map<Location, Room>,
+class Labyrinth private constructor(val width: Int, val height: Int,  val map: Map<Location, Room>,
                                     val wormholeMap: Map<Location, Location>) {
 
     private val Location.isCorrect get() = x in 0 until width && y in 0 until height
