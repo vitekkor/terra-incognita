@@ -9,8 +9,8 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
     private val Location.isCorrect get() = x in 0 until width && y in 0 until height
 
     operator fun get(location: Location): Room =
-            map[location]
-                    ?: if (location.isCorrect) error("Incorrect location: $location") else Wall
+        map[location]
+            ?: if (location.isCorrect) error("Incorrect location: $location") else Wall
 
     operator fun get(x: Int, y: Int) = get(Location(x, y))
 
@@ -20,7 +20,7 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
 
     private val treasures: List<Location> = map.entries.filter { (_, room) -> room is WithContent }.map { it.key }
 
-    fun recover(){
+    fun recover() {
         treasures.forEach { ((map[it] ?: error("")) as WithContent).content = Treasure }
     }
 
@@ -38,7 +38,7 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
             require(height in 2..25 && width in 2..40) { "Illegal size of labyrinth" }
             require(lines[0].matches(Regex("""#+"""))
                     && lines.last().matches(Regex("""#+"""))) { "Illegal labyrinth symbol" }
-            require(lines.last().length - 2 == width) { "Different row sizes" }
+            require(lines.all { it.length - 2 == width }) { "Different row sizes" }
 
             val map = hashMapOf<Location, Room>()
             val wormholes = mutableMapOf<Int, Wormhole>()
@@ -61,7 +61,7 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
                             startExists = true
                         }
                         'E' -> Exit.also {
-                            require(!endExists) { "The labyrinth already contains a end" }
+                            require(!endExists) { "The labyrinth already contains an end" }
                             endExists = true
                         }
                         '#' -> Wall
@@ -75,13 +75,13 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
                 }
             }
             require(startExists) { "The labyrinth must contain a start" }
-            require(endExists) { "The labyrinth must contain a end" }
+            require(endExists) { "The labyrinth must contain an end" }
             require(treasureExists) { "The labyrinth must contain at least one treasure" }
 
             for ((wormholeId, wormhole) in wormholes) {
                 wormhole.next = wormholes[wormholeId + 1]
-                        ?: wormholes[0]
-                                ?: error("No next wormhole found for $wormholeId")
+                    ?: wormholes[0]
+                            ?: error("No next wormhole found for $wormholeId")
                 wormholeMap[wormholeLocations[wormhole]!!] = map.entries.find { (_, anotherRoom) ->
                     anotherRoom == wormhole.next
                 }!!.key

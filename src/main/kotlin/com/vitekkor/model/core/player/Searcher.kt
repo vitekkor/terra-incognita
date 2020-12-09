@@ -22,9 +22,9 @@ class Searcher : AbstractPlayer() {
     override fun getNextMove(): Move {
         if (haveTreasure && exitFound) {
             if (wayToExit.isEmpty()) {
-                wayToExit.addAll(findPathToExit(currentLocation)!!)
+                findPathToExit(currentLocation)?.let { wayToExit.addAll(it) }
             }
-            if (wayToExit.isNotEmpty()){
+            if (wayToExit.isNotEmpty()) {
                 lastDirection = wayToExit.first()
                 wayToExit.removeAt(0)
             }
@@ -54,7 +54,10 @@ class Searcher : AbstractPlayer() {
     }
 
     private val visited = mutableSetOf<Location>()
-    private fun findPathToExit(from: Location, previousPath: MutableList<Direction> = mutableListOf()): MutableList<Direction>? {
+    private fun findPathToExit(
+        from: Location,
+        previousPath: MutableList<Direction> = mutableListOf()
+    ): MutableList<Direction>? {
         if (map[from] is Exit) {
             return previousPath
         }
@@ -62,7 +65,8 @@ class Searcher : AbstractPlayer() {
         return Direction.values().filter {
             val newLocation = from + it
             !visited.contains(newLocation) && (map[newLocation] is Empty || map[newLocation] is WithContent || map[newLocation] is Exit)
-        }.mapNotNull { findPathToExit(from + it, mutableListOf<Direction>().apply { addAll(previousPath); add(it) }) }.minByOrNull { it.size }
+        }.mapNotNull { findPathToExit(from + it, mutableListOf<Direction>().apply { addAll(previousPath); add(it) }) }
+            .minByOrNull { it.size }
     }
 
     private fun reload() {
@@ -77,14 +81,14 @@ class Searcher : AbstractPlayer() {
         fun searchPath(labyrinth: Labyrinth, moveLimit: Int): List<Move> {
             val searcher = Searcher()
             val gameMaster = GameMaster(labyrinth, searcher)
-            for (i in 1..1000) {
+            for (i in 1..10000) {
                 searcher.reload()
                 gameMaster.reload()
                 val result = gameMaster.makeMoves(1000)
                 if (result.exitReached) {
                     searcher.reload()
                     if (gameMaster.playerMoves.size <= moveLimit)
-                    return gameMaster.playerMoves
+                        return gameMaster.playerMoves
                 }
             }
             return emptyList()

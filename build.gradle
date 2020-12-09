@@ -19,10 +19,15 @@ javafx {
     modules = ['javafx.controls']
 }
 
+test {
+    useJUnitPlatform()
+}
+
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation "no.tornado:tornadofx:$tornadofx_version"
-    testImplementation "org.jetbrains.kotlin:kotlin-test-junit"
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
 }
 
 compileKotlin {
