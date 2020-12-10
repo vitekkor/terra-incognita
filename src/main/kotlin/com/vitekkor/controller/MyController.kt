@@ -29,15 +29,66 @@ import javafx.util.Duration
 import tornadofx.*
 import java.io.File
 
-
+/**
+ * The controller that provides the connection between the game logic and its display
+ */
 class MyController : Controller() {
     private val gameView: GameView by inject()
     private val mainView = find(MainView::class)
     private val gamePreView = find(GamePreView::class)
     private val mainMenuView = find(MainMenuView::class)
-    private lateinit var labyrinth: Labyrinth
 
-    //var backButton: Button? = null
+    /**File formatting rules.*/
+    private val fileFormat = File(resources.url("/error.txt").toURI()).readText()
+
+    /**Alert about an error when trying to create a labyrinth from file.*/
+    private var errorAlert: Alert? = null
+
+    /**Player's position.*/
+    private lateinit var playerLocation: Location
+
+    /**Labyrinth map with coordinates (upper-left) of each tile.*/
+    private val map = mutableMapOf<Pair<Int, Int>, ImageView>()
+
+    /**Current player.*/
+    private var player: Human? = null
+
+    /**[GameMaster]*/
+    private var gameMaster: GameMaster? = null
+
+    /**Current labyrinth.*/
+    private lateinit var labyrinth: Labyrinth
+    var moveLimit = 1000
+
+    /**Player's name.*/
+    var name = "Player"
+
+    /**True if artificial intelligence is playing the game and false if human is playing*/
+    private var notAHuman = false
+
+    /**Boolean property: true if player can make new move and false if not*/
+    private val moveAllowedProperty = SimpleBooleanProperty(true).apply {
+        addListener(ChangeListener { _, _, moveAllowed ->
+            if (moveAllowed && notAHuman) // если можно делать ход и если играет искусственный интеллект
+                if (!moveResult.exitReached) // делаем ходы, пока не достигнем выхода
+                    makeMove((player!!.getNextMove() as WalkMove).direction)
+                // достигли выхода - выводим сообщение о том, что показ прохождения лабиринта закончен
+                else displayPassageCompleted()
+        })
+    }
+
+    /**Result of move*/
+    private lateinit var moveResult: GameMaster.GameResult
+
+    /*private fun createMovesAnimation():Group = Group().apply {
+        timeline(true) { cycleCount = Animation.INDEFINITE; keyframe(1.seconds) { keyvalue()}  }
+    }*/
+
+
+    /**
+     * Creates a labyrinth from a user's [file] or takes a file from resource with a specific [size].
+     * @return <code>True</code> if loading was successful, and <code>False</code> if not
+     */
     fun loadLabyrinth(file: File? = null, size: Pair<Int, Int>? = null): Boolean {
         return if (file != null) {
             load(file)
@@ -53,11 +104,15 @@ class MyController : Controller() {
         }
     }
 
+    /**
+     * Creates a labyrinth from a [file].
+     * @return <code>True</code> if loading was successful, and <code>False</code> if not
+     */
     private fun load(file: File): Boolean {
         try {
             labyrinth = Labyrinth.createFromFile(file)
             return true
-        } catch (e: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) { // выводим сообщение об ошибке при попытке создать лабиринт из файла
             showAlert(e.message!!)
         } catch (e: IllegalStateException) {
             showAlert(e.message!!)
@@ -65,10 +120,13 @@ class MyController : Controller() {
         return false
     }
 
-    private val howTo = File(resources.url("/error.txt").toURI()).readText()
-    private var errorAlert: Alert? = null
-
+    /**
+     * Called when an error message about a failed attempt to create a labyrinth should be displayed.
+     * @param message
+     * the string of the detail message of the exception that was thrown when trying to create the labyrinth
+     */
     private fun showAlert(message: String) {
+        // преобразуем сообщение в "человеческий" вид
         val contentText = when {
             message == "Empty File" -> "File could not be empty"
             message.matches(Regex(""".*[Ww]ormhole.+""")) -> "The labyrinth can contain from 0 to 10 holes." +
@@ -88,22 +146,24 @@ class MyController : Controller() {
             message == "The labyrinth must contain at least one treasure" -> "The labyrinth must contain at least one treasure"
             else -> ""
         } + "\nTo view the correct formatting of the file hover over the icon"
+        // создаем диалоговое окно, если ещё не было создано
         if (errorAlert == null) {
             errorAlert = createDialog("Error", message, contentText, Alert.AlertType.ERROR)
             errorAlert!!.graphic = ImageView(Image(resources.stream("/error.png"))).apply {
-                tooltip(howTo) {
+                tooltip(fileFormat) {
                     showDelay = 0.1.seconds
                     showDuration = Duration.INDEFINITE
                     font = Font.font("Consolas")
                 }
             }
-        } else {
+        } else { // передаем сообщение об ошибке
             errorAlert!!.headerText = message
             errorAlert!!.contentText = contentText
         }
         errorAlert!!.showAndWait()
     }
 
+    /*Tiles*/
     private lateinit var frontWall: Image
     private lateinit var rearWall: Image
     private lateinit var rightWall: Image
@@ -118,6 +178,10 @@ class MyController : Controller() {
     private lateinit var exit1: Image
     private lateinit var exit2: Image
     private lateinit var playerTile: Image
+
+    // предполагалось, что во время ходьбы будет анимация движения ног.
+    // Возможно в одной из следующих версий я всё таки реализую это
+    private lateinit var playerMovesAnimation: ImageView
 
     //private lateinit var playerMakesMove: ArrayList<Image>
     fun loadAssets() {
@@ -138,6 +202,10 @@ class MyController : Controller() {
         //for (i in 1..15) playerMakesMove.add(Image(resources.stream("/tiles/player_moves/player_$i.png")))
     }
 
+    /**
+     * Returns image view with a specific [type] of tile.
+     * As default - empty cell.
+     */
     fun getTile(type: String): ImageView = ImageView().apply {
         this.image = when (type) {
             "front_wall" -> frontWall
@@ -160,43 +228,28 @@ class MyController : Controller() {
         isVisible = false
     }
 
-    private lateinit var playerMovesAnimation: ImageView
-
-    /*private fun createMovesAnimation():Group = Group().apply {
-        timeline(true) { cycleCount = Animation.INDEFINITE; keyframe(1.seconds) { keyvalue()}  }
-    }*/
-    private val map = mutableMapOf<Pair<Int, Int>, ImageView>()
-
+    /**
+     * Creates a map of the labyrinth that was previously created by the controller.
+     * Call only after calling [loadLabyrinth]!
+     * @return StackPane with tiles
+     */
     fun createMap(): StackPane {
         map.clear()
         val playerStackPane = StackPane()
         val stackPane = StackPane()
-        fun getStartOrExit(entrance: Boolean, x: Int, y: Int): ImageView {
-            val number = if (labyrinth[x, y + 1] is Empty || labyrinth[x, y - 1] is Empty) 1 else 2
-            val tileName = if (entrance) "entrance" else "exit"
-            val tile = getTile("$tileName$number")
-            tile.translateX = x * DX_X - DY_X * y
-            tile.translateY = x * DX_Y + DY_Y * y
-            return tile
-        }
 
-        fun getEmptyCell(x: Int, y: Int): ImageView {
-            val tile = getTile(labyrinth[x, y].toString())
-            tile.translateX = x * DX_X - DY_X * y
-            tile.translateY = x * DX_Y + DY_Y * y
-            return tile
-        }
-
+        // "строим" верхние стены
         for (i in 0 until labyrinth.width) {
             val rearWall = getTile("rear_wall")
-            rearWall.translateX = i * DX_X + DY_X
-            rearWall.translateY = i * DX_Y - DY_Y
+            rearWall.translateX = i * DX_X + DY_X // смещение по оси X
+            rearWall.translateY = i * DX_Y - DY_Y // смещение по оси Y
             stackPane.add(rearWall)
             map[i to -1] = rearWall
         }
+        // строим
         for (i in 0 until labyrinth.height) {
             for (j in 0 until labyrinth.width) {
-                if (j == 0) {
+                if (j == 0) { // добавляем левую боковую стену
                     val leftWall = getTile("left_wall1")
                     leftWall.translateX = -DX_X - DY_X * i
                     leftWall.translateY = -DX_Y + DY_Y * i
@@ -204,57 +257,60 @@ class MyController : Controller() {
                     map[-1 to i] = leftWall
                 }
                 when (labyrinth[j, i].toString()) {
-                    "wall" -> {
+                    "wall" -> { // добавляем стену
                         val wall = getTile("left_wall")
                         wall.translateX = j * DX_X - DY_X * i
                         wall.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(wall)
                         map[j to i] = wall
                     }
-                    "treasure" -> {
+                    "treasure" -> { // добавляем сокровище
                         val treasure = getTile("treasure")
                         treasure.translateX = j * DX_X - DY_X * i
                         treasure.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(treasure)
                         map[j to i] = treasure
                     }
-                    "emptyCell" -> {
+                    "emptyCell" -> { // добавляем пустую клетку
                         val emptyCell = getEmptyCell(j, i)
                         stackPane.add(emptyCell)
                         map[j to i] = emptyCell
                     }
-                    "wormhole" -> {
+                    "wormhole" -> { // добавляем червоточину
                         val wormhole = getTile("wormhole")
                         wormhole.translateX = j * DX_X - DY_X * i
                         wormhole.translateY = j * DX_Y + DY_Y * i
                         stackPane.add(wormhole)
                         map[j to i] = wormhole
                     }
-                    "entrance" -> {
+                    "entrance" -> { // добавляем вход
                         val entrance = getStartOrExit(true, j, i)
                         entrance.isVisible = true
+                        // добавляем игрока
                         playerMovesAnimation = getTile("player")
                         playerMovesAnimation.isVisible = true
                         playerMovesAnimation.translateX = entrance.translateX
                         playerMovesAnimation.translateY = entrance.translateY
+
                         stackPane.add(entrance)
                         playerStackPane.add(playerMovesAnimation)
                         map[j to i] = entrance
                     }
-                    "exit" -> {
+                    "exit" -> { // добавляем выход
                         val exit = getStartOrExit(false, j, i)
-                        //exit.isVisible = false
                         stackPane.add(exit)
                         map[j to i] = exit
                     }
                 }
             }
+            // добавляем правую боковую стену
             val wall = getTile("right_wall")
             wall.translateX = DX_X * labyrinth.width - DY_X * i
             wall.translateY = DX_Y * labyrinth.width + DY_Y * i
             stackPane.add(wall)
             map[labyrinth.width to i] = wall
         }
+        // "строим" нижние стены
         for (i in 0 until labyrinth.width) {
             val frontWall = getTile("front_wall")
             frontWall.translateX = i * DX_X - DY_X * labyrinth.height
@@ -262,16 +318,43 @@ class MyController : Controller() {
             stackPane.add(frontWall)
             map[i to labyrinth.height] = frontWall
         }
-        stackPane.add(playerStackPane)
+
+        stackPane.add(playerStackPane) // добавляем игрока
         return stackPane
     }
 
+    /**
+     * Returns the empty cell tile with correct offset
+     */
+    private fun getEmptyCell(x: Int, y: Int): ImageView {
+        val tile = getTile(labyrinth[x, y].toString())
+        tile.translateX = x * DX_X - DY_X * y // смещение по оси X
+        tile.translateY = x * DX_Y + DY_Y * y // смещение по оси X
+        return tile
+    }
 
-    private lateinit var playerLocation: Location
+    /**
+     * Returns the starting or ending tile correctly rotated to match the other cells in the labyrinth and
+     * with correct offset
+     */
+    private fun getStartOrExit(entrance: Boolean, x: Int, y: Int): ImageView {
+        // выбираем как должен быть повернут вход/выход
+        val number = if (labyrinth[x, y + 1] is Empty || labyrinth[x, y - 1] is Empty) 1 else 2
+        val tileName = if (entrance) "entrance" else "exit" // вход или выход
+        val tile = getTile("$tileName$number")
+        tile.translateX = x * DX_X - DY_X * y // смещение по оси X
+        tile.translateY = x * DX_Y + DY_Y * y // смещение по оси X
+        return tile
+    }
 
+    /**
+     * Shows player's [Condition] via popup and draws animation of the move
+     * */
     fun showMoveResult(result: MoveResult) {
         val move: WalkMove = player!!.getNextMove() as WalkMove
+        // если ход был успешен, то рисуем анимацию хода
         if (result.successful) {
+            // offset
             val (x, y) = when (move.direction) {
                 Direction.NORTH -> {
                     playerLocation = playerLocation.copy(y = playerLocation.y - 1)
@@ -290,14 +373,18 @@ class MyController : Controller() {
                     -DX_X to -DX_Y
                 }
             }
-            map[playerLocation.x to playerLocation.y]!!.isVisible = true
+            map[playerLocation.x to playerLocation.y]!!.isVisible = true // отображаем клетку, в которую идём
+            // отрисовываем перемещение игрока
             timeline(true) {
                 keyframe(1.seconds) {
                     keyvalue(playerMovesAnimation.translateXProperty(), x + playerMovesAnimation.translateX)
                     keyvalue(playerMovesAnimation.translateYProperty(), y + playerMovesAnimation.translateY)
                 }
                 setOnFinished {
+                    // если клетка, в которую походил игрок, червоточина, то надо отрисовать перемещение в следующую
+                    // червоточину
                     if (result.room is Wormhole) {
+                        // рассчитываем перемещение
                         val newXOldX = labyrinth.wormholeMap.getValue(playerLocation).x - playerLocation.x
                         val newYOldY = labyrinth.wormholeMap.getValue(playerLocation).y - playerLocation.y
                         playerLocation = labyrinth.wormholeMap.getValue(playerLocation)
@@ -308,25 +395,28 @@ class MyController : Controller() {
                             keyframe(0.67.seconds) {
                                 keyvalue(playerMovesAnimation.translateXProperty(), newX, Interpolator.EASE_BOTH)
                                 keyvalue(playerMovesAnimation.translateYProperty(), newY, Interpolator.EASE_BOTH)
-                                setOnFinished { moveNotMadeProperty.value = true }
+                                setOnFinished {
+                                    moveAllowedProperty.value = true
+                                }//закончили отрисовку, можно ходить дальше
                             }
                         }
-                    } else moveNotMadeProperty.value = true
+                    } else moveAllowedProperty.value = true //закончили отрисовку, можно ходить дальше
                 }
             }
 
-        } else {
+        } else { // упёрлись в стену. Нужно сделать её видимой
             val pos = move.direction + playerLocation; map[pos.x to pos.y]!!.isVisible = true
-            moveNotMadeProperty.value = true
+            moveAllowedProperty.value = true //закончили отрисовку, можно ходить дальше
         }
-        if (!result.condition.exitReached) {
+        if (!result.condition.exitReached) { // если ещё не нашли выход <=> играем дальше
+            // то надо вывести результат хода
             val tooltip = Tooltip(result.status)
             tooltip.opacity = 0.0
             tooltip.show(gameView.currentWindow)
             tooltip.opacityProperty().animate(1.0, 0.5.seconds) {
                 setOnFinished {
                     timeline(true) {
-                        keyframe(0.5.seconds) {}
+                        keyframe(1.seconds) {}
                         setOnFinished {
                             tooltip.opacityProperty().animate(0.0, 0.5.seconds) {
                                 setOnFinished { tooltip.hide() }
@@ -338,25 +428,14 @@ class MyController : Controller() {
         }
     }
 
-
-    private var player: Human? = null
-    private var gameMaster: GameMaster? = null
-    var moveLimit = 1000
-    var name = "Player"
-    private val moveNotMadeProperty = SimpleBooleanProperty(true).apply {
-        addListener(ChangeListener { _, _, moveNotMade ->
-            if (moveNotMade && notAHuman)
-                if (!moveResult.exitReached)
-                    makeMove((player!!.getNextMove() as WalkMove).direction)
-                else displayPassageCompleted()
-        })
-    }
-    private lateinit var moveResult: GameMaster.GameResult
-
+    /**Player make move with specific [direction]*/
     fun makeMove(direction: Direction) {
-        if (moveNotMadeProperty.value) {
-            moveNotMadeProperty.value = false
+        if (moveAllowedProperty.value) { //если ходить можно, то делаем ход
+            moveAllowedProperty.value = false
+            // если играет человек, то необходимо в Human()
+            // передать следующий ход, чтобы GameMaster мог потом его считать из getNextMove()
             if (!notAHuman) player!!.setNextMove(WalkMove(direction))
+            //  далее всё аналогично методу GameMaster().makeMoves(limit: Int)
             val moves = gameMaster!!.moves
             var wallCount = 0
             if (moves < moveLimit) {
@@ -366,11 +445,16 @@ class MyController : Controller() {
                 wallCount += if (oldMoves == newMoves) 1 else 0
                 if (wallCount >= 100) endGame(moveResult)
                 gameView.setMovesLeft(moveLimit - newMoves)
+                // если достигли выхода и играет человек, то выводим сообщение о том, что игрок выиграл
                 if (moveResult.exitReached && !notAHuman) endGame(moveResult)
             } else endGame(GameMaster.GameResult(moves, exitReached = false))
         }
     }
 
+    /**
+     * Starts a new game or resets the current one
+     * @return limit of moves
+     */
     fun startGame(): Int {
         notAHuman = false
         if (player == null) player = Human()
@@ -383,12 +467,17 @@ class MyController : Controller() {
         return moveLimit
     }
 
+    /**
+     * Shows alert about result of the game
+     */
     private fun endGame(result: GameMaster.GameResult) {
         val headerText = if (result.exitReached) "You Win!" else "Game Over"
-        val contentText = if (result.exitReached)
+        // информация о результате игры
+        val contentText = "$name. " + if (result.exitReached)
             "Congratulations! You made ${result.moves} moves, collected treasures, and reached the exit."
         else "Unfortunately, you lost. Try again."
         val alert = createDialog("Game Result", headerText, contentText, Alert.AlertType.INFORMATION)
+        // устанавливаем свои кнопки
         val toGamePreView = ButtonType("Play another labyrinth")
         val playAgain = ButtonType("Play again")
         val toMainMenu = ButtonType("Menu")
@@ -399,27 +488,34 @@ class MyController : Controller() {
         } else buttons.add(tryAgain)
         buttons.add(toMainMenu)
         alert.buttonTypes.setAll(buttons)
+
         val dialogResult = alert.showAndWait()
         when (dialogResult.get()) {
-            toGamePreView -> {
+            toGamePreView -> {// go to game settings
                 mainView.root.center.replaceWith(gamePreView.root)
                 gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
-            } // go to game settings
-            toMainMenu -> {
+            }
+            toMainMenu -> { // go to menu
                 mainView.root.center.replaceWith(mainMenuView.root)
                 gameView.replaceWith<MainView>(ViewTransition.Fade(0.3.seconds))
-            } // go to menu
-            tryAgain -> tryAgain() //reload game
-            playAgain -> tryAgain()
+            }
+            tryAgain -> playAgain() // reload game
+            playAgain -> playAgain() // reload game
         }
     }
 
-    private fun tryAgain() {
+    /**
+     * Play again in current labyrinth
+     */
+    private fun playAgain() {
         gameView.newGame()
-        moveNotMadeProperty.value = true
+        moveAllowedProperty.value = true
         notAHuman = false
     }
 
+    /**
+     * Shows a message asking if you really want to stop playing.
+     */
     fun exitFromGameView() {
         val contentText = "All your progress will be reset"
         val alert = createDialog("Exit", "All your progress will be reset", contentText, Alert.AlertType.CONFIRMATION)
@@ -437,13 +533,21 @@ class MyController : Controller() {
             no -> {
                 alert.close()
                 notAHuman = isHuman
-                moveNotMadeProperty.value = false
-                moveNotMadeProperty.value = true
+                moveAllowedProperty.value = false // если пытались прекратить играть во время пока прохождения
+                moveAllowedProperty.value = true // при нажатии no надо продолжить показывать прохождение
             }
         }
     }
 
-    private fun createDialog(title: String, headerText: String, contentText: String, alertType: Alert.AlertType): Alert {
+    /**
+     * Returns alert with specific [title], [headerText], [contentText] and [Alert.AlertType]
+     */
+    private fun createDialog(
+        title: String,
+        headerText: String,
+        contentText: String,
+        alertType: Alert.AlertType
+    ): Alert {
         val alert = Alert(alertType)
         alert.initStyle(StageStyle.UNDECORATED)
         alert.title = title
@@ -461,15 +565,16 @@ class MyController : Controller() {
         return alert
     }
 
-    private var notAHuman = false
+    /**
+     * Trying to pass the labyrinth. If there is a solution, then it shows it, if not, then it displays the corresponding message.
+     */
     fun passLabyrinth() {
         notAHuman = false
         gameView.newGame()
         val status = TaskStatus()
         var result: List<Move> = emptyList()
         runAsync(status) {
-            labyrinth.recover()
-            result = Searcher.searchPath(labyrinth, moveLimit)
+            result = Searcher.searchPath(labyrinth, moveLimit) // пытаемся решить
         }
         val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION)
         val label = Text("").apply {
@@ -479,46 +584,53 @@ class MyController : Controller() {
         }
         val vBox = VBox().apply {
             progressbar(status.progress) {
-                visibleWhen { status.running }
+                visibleWhen { status.running } // отображение прогресса
             }
             add(label)
             maxWidth = Double.MAX_VALUE
         }
         status.completed.addListener(ChangeListener { _, _, completed ->
             label.text = if (completed && result.isNotEmpty()) "Successful!\nPress Ok to show the pass"
-            else "Couldn't solve the labyrinth..."
+            else "Couldn't solve \nthe current labyrinth..."
         })
+
         alert.dialogPane.content = vBox
         val dialogResult = alert.showAndWait()
-        fun showPath() {
-            if (status.completed.value) {
+
+        fun showPath() { // показываем прохождение
                 alert.close()
                 if (result.isNotEmpty()) {
-                    moveNotMadeProperty.value = true
+                    moveAllowedProperty.value = true
                     notAHuman = true
                     playerLocation = labyrinth.entrances[0]
                     player = Humanlike(result)
                     gameMaster!!.setNewPlayer(player!!)
                     makeMove((player!!.getNextMove() as WalkMove).direction)
+                    // далее функция будет вызываться сама, когда moveAllowedProperty.value изменяется с false на true
                 }
-            }
         }
-        try {
-            if (dialogResult.get().text == "OK") showPath()
-        } catch (e: NoSuchElementException) {
-           showPath()
+        if (status.completed.value) { // закрываем диалоговое окно
+            try {
+                if (dialogResult.get().text == "OK") showPath()
+            } catch (e: NoSuchElementException) {
+                showPath()
+            }
         }
 
     }
 
     private var displayPassageCompletedDialog: Alert? = null
-    private fun displayPassageCompleted() {
+
+    /**
+     * Shows alert about successful completion the labyrinth
+     */
+    private fun displayPassageCompleted() { // показываем сообщение, после того, как прохождение лабиринта было показано
         if (displayPassageCompletedDialog == null) {
             displayPassageCompletedDialog = createDialog(
-                    "",
-                    "That's it.",
-                    "Here is the solution to the labyrinth. Click OK to exit",
-                    Alert.AlertType.INFORMATION
+                "",
+                "That's it.",
+                "Here is the solution to the labyrinth. Click OK to exit",
+                Alert.AlertType.INFORMATION
             )
         }
         val taskStatus = TaskStatus().apply {
