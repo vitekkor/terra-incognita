@@ -1,9 +1,9 @@
 package com.vitekkor.model.core
 
-/** Anything in the room */
+/**Anything in the room */
 sealed class RoomContent
 
-/** Item is something player can take with */
+/**Item is something player can take with */
 sealed class Item : RoomContent()
-
+/**Treasure*/
 object Treasure : Item()

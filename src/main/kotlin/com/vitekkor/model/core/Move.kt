@@ -1,5 +1,6 @@
 package com.vitekkor.model.core
 
+/**Move*/
 sealed class Move
 
 /** This move does nothing*/
