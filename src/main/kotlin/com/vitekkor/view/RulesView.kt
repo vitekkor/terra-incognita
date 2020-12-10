@@ -9,11 +9,12 @@ import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.CornerRadii
 import javafx.scene.layout.HBox
 import javafx.scene.paint.Color
-import javafx.scene.text.TextAlignment
 import tornadofx.*
 
+/**Shows game rules*/
 class RulesView : Fragment() {
     private val controller: MyController by inject()
+    /**Rules*/
     private val text = resources.stream("/rules.txt").bufferedReader().readText().split("^")
     override val root = vbox {
         addClass("setBackgroundFill")
@@ -33,6 +34,7 @@ class RulesView : Fragment() {
                         }
                     }
                 }
+                // иллюстрации
                 row {
                     add(rulesHBox("Wall - not available for pass", "front_wall"))
                 }
@@ -67,6 +69,9 @@ class RulesView : Fragment() {
 
     }
 
+    /**
+     * Returns HBbox with [text] and tile image
+     */
     private fun rulesHBox(text: String, nameOfTile: String): HBox {
         return hbox {
             alignment = Pos.CENTER

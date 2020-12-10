@@ -4,6 +4,9 @@ import javafx.geometry.Insets
 import javafx.geometry.Pos
 import tornadofx.*
 
+/**
+ * Shows a message asking if you really want to quit.
+ */
 class ExitView : View() {
     override val root = vbox {
         addClass("setBackgroundFill")

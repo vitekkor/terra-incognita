@@ -11,18 +11,24 @@ import javafx.stage.FileChooser
 import tornadofx.*
 import java.io.File
 
+/**
+ * Game setup screen view: labyrinth selection, setting name and move limit
+ */
 class GamePreView : Fragment() {
     private val gameView: GameView by inject()
     private val mainView: MainView by inject()
     private val controller: MyController by inject()
     private var min = 2
-    private lateinit var length: List<Int>
-    private lateinit var wide: List<Int>
-    private lateinit var selectedItem1: SimpleIntegerProperty
-    private lateinit var selectedItem2: SimpleIntegerProperty
+    private lateinit var height: List<Int>
+    private lateinit var width: List<Int>
+    private lateinit var selectedHeight: SimpleIntegerProperty
+    private lateinit var selectedWidth: SimpleIntegerProperty
     private val emptyHBox = hbox { alignment = Pos.CENTER }
+    /**Default labyrinth width*/
     private lateinit var comboboxWidth: ComboBox<Number>
+    /**Default labyrinth height*/
     private lateinit var comboboxHeight: ComboBox<Number>
+    /**Hbox with default labyrinths*/
     private lateinit var defaultLabyrinth: HBox
     private val movesLimit = textfield("1000") {
         hboxConstraints { marginLeftRight(20.0) }
@@ -79,20 +85,24 @@ class GamePreView : Fragment() {
         button("Start") {
             vboxConstraints { margin = Insets(20.0) }
             action {
-                when {
+                when {// проверяем корректность введённых имени и лимита ходов
                     playerName.text.trim().isEmpty() -> playerName.addClass("error")
-                    movesLimit.text.trim().isEmpty() || movesLimit.text.trim().toIntOrNull() == null -> movesLimit.addClass("error")
-                    defaultLabyrinth.parent != null -> {
+                    movesLimit.text.trim().isEmpty() ||
+                            movesLimit.text.trim().toIntOrNull() == null -> movesLimit.addClass("error")
+                    defaultLabyrinth.parent != null -> {// если выбран лабиринт по умолчанию
+                        // пытаемся создать лабиринт
                         if (controller.loadLabyrinth(size =
                                 comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
-                            controller.moveLimit = movesLimit.text.trim().toInt()
-                            controller.name = playerName.text
+                            controller.moveLimit = movesLimit.text.trim().toInt() // устанавливаем лимит ходов
+                            controller.name = playerName.text // имя
+                            // и начинаем игру
                             mainView.replaceWith<GameView>(ViewTransition.Fade(0.3.seconds))
                             gameView.newGame()
                             gameView.setPlayersName(playerName.text)
                         }
                     }
-                    else -> {
+                    else -> { // если выбран пользовательский лабиринт из файла
+                        // пытаемся создать лабиринт
                         if (controller.loadLabyrinth(file[0])) {
                             controller.moveLimit = movesLimit.text.trim().toInt()
                             controller.name = playerName.text
@@ -111,14 +121,14 @@ class GamePreView : Fragment() {
         playerName.textProperty().addListener { _, _, _ -> playerName.removeClass("error") }
         movesLimit.onMousePressed = EventHandler { movesLimit.removeClass("error") }
         movesLimit.textProperty().addListener { _, _, _ -> movesLimit.removeClass("error") }
-        runAsync {
-            length = List(39) { min++ }
-            wide = length.subList(0, 24)
-            selectedItem1 = SimpleIntegerProperty(length.first())
-            selectedItem2 = SimpleIntegerProperty(wide.first())
+        runAsync { // заполняем размеры дефолтных лабиринтов
+            height = List(39) { min++ }
+            width = height.subList(0, 24)
+            selectedHeight = SimpleIntegerProperty(height.first())
+            selectedWidth = SimpleIntegerProperty(width.first())
         } ui {
-            comboboxWidth = combobox(selectedItem1, length)
-            comboboxHeight = combobox(selectedItem2, wide)
+            comboboxWidth = combobox(selectedHeight, height)
+            comboboxHeight = combobox(selectedWidth, width)
             defaultLabyrinth = hbox {
                 hboxConstraints { margin = Insets(20.0) }
                 label("Choose the size of the labyrinth") { hboxConstraints { marginLeftRight(20.0) } }

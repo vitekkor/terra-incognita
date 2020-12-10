@@ -184,6 +184,7 @@ class MyController : Controller() {
     private lateinit var playerMovesAnimation: ImageView
 
     //private lateinit var playerMakesMove: ArrayList<Image>
+    /**Load assets from resources*/
     fun loadAssets() {
         frontWall = Image(resources.stream("/tiles/wall_front.png"))
         rearWall = Image(resources.stream("/tiles/wall_rear.png"))

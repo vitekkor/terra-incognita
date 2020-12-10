@@ -1,21 +1,16 @@
 package com.vitekkor.view
 
 import com.vitekkor.Styles
-import javafx.beans.property.SimpleBooleanProperty
 import javafx.geometry.Pos
 import javafx.scene.input.KeyCombination
-import javafx.scene.paint.Paint
 import tornadofx.*
-import java.awt.Color
 
+/**
+ * Main view for menu, game preview, rules view and exit view
+ */
 class MainView : View("Terra Incognita") {
     private val menu = find(MainMenuView::class)
-    private val b = SimpleBooleanProperty(true)
 
-    /*private val backButton: Button = button("Back") {
-        //isVisible = false
-        hboxConstraints { marginBottom = 25.0 }
-    }*/
     override val root = borderpane {
         shortcut(KeyCombination.valueOf("Esc")) {
             if (center === menu.root) {
@@ -33,6 +28,5 @@ class MainView : View("Terra Incognita") {
             }
         }
         center = menu.root
-        //bottom = hbox { add(backButton) }
     }
 }

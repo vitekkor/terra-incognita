@@ -2,9 +2,12 @@ package com.vitekkor.view
 
 import javafx.geometry.Insets
 import javafx.geometry.Pos
-import javafx.scene.input.KeyCombination
 import tornadofx.*
 
+/**
+ * Main menu view. Has three buttons:
+ * Play (go to [GamePreView]), Game Rules (go to [RulesView]), Exit (go to [ExitView])
+ */
 class MainMenuView : Fragment() {
     override val root = vbox {
         addClass("setBackgroundFill")

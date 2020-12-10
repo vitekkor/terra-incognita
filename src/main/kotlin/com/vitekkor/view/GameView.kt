@@ -14,6 +14,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import tornadofx.*
 
+/**
+ * Game view
+ */
 class GameView : View() {
     private val controller: MyController by inject()
     private val movesLimitLabel = Label("").apply {
@@ -62,6 +65,9 @@ class GameView : View() {
         movesLimitLabel.text = "Moves left: ${controller.startGame()}"
     }
 
+    /**
+     * Sets of movable and zoomable stackPane
+     */
     private fun movableAndZoomableStackpane(stackPane: StackPane) {
         var x = 0.0
         var y = 0.0
