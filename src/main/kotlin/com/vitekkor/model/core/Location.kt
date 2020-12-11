@@ -11,9 +11,9 @@ data class Location(val x: Int, val y: Int) {
     }
 
     /**
-     * Returns a Location obtained by adding dx and dy from [other].
+     * Returns a Location obtained by adding dx and dy from [direction].
      */
-    operator fun plus(other: Direction): Location {
-        return other.plus(this)
+    operator fun plus(direction: Direction): Location {
+        return direction.plus(this)
     }
 }

@@ -18,7 +18,7 @@ open class Human : AbstractPlayer() {
 
     override fun getNextMove(): Move = move
 
-    open fun setNextMove(newMove: Move) {
+    fun setNextMove(newMove: Move) {
         move = newMove
     }
     override fun setMoveResult(result: MoveResult) {

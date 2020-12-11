@@ -567,7 +567,8 @@ class MyController : Controller() {
     }
 
     /**
-     * Trying to pass the labyrinth. If there is a solution, then it shows it, if not, then it displays the corresponding message.
+     * Trying to pass the labyrinth.
+     * If there is a solution, then it shows it, if not, then it displays the corresponding message.
      */
     fun passLabyrinth() {
         notAHuman = false
