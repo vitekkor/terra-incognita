@@ -22,9 +22,9 @@ import javafx.scene.layout.GridPane
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Paint
-import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.StageStyle
+import javafx.stage.Window
 import javafx.util.Duration
 import tornadofx.*
 import java.io.File
@@ -148,12 +148,13 @@ class MyController : Controller() {
         } + "\nTo view the correct formatting of the file hover over the icon"
         // создаем диалоговое окно, если ещё не было создано
         if (errorAlert == null) {
-            errorAlert = createDialog("Error", message, contentText, Alert.AlertType.ERROR)
+            errorAlert = createDialog("Error", message, contentText, Alert.AlertType.ERROR, gamePreView.currentWindow)
             errorAlert!!.graphic = ImageView(Image(resources.stream("/error.png"))).apply {
                 tooltip(fileFormat) {
+                    styleClass.remove("tooltip")
+                    styleClass.add("error_tooltip")
                     showDelay = 0.1.seconds
                     showDuration = Duration.INDEFINITE
-                    font = Font.font("Consolas")
                 }
             }
         } else { // передаем сообщение об ошибке
@@ -477,7 +478,7 @@ class MyController : Controller() {
         val contentText = "$name. " + if (result.exitReached)
             "Congratulations! You made ${result.moves} moves, collected treasures, and reached the exit."
         else "Unfortunately, you lost. Try again."
-        val alert = createDialog("Game Result", headerText, contentText, Alert.AlertType.INFORMATION)
+        val alert = createDialog("Game Result", headerText, contentText, Alert.AlertType.INFORMATION, gameView.currentWindow)
         // устанавливаем свои кнопки
         val toGamePreView = ButtonType("Play another labyrinth")
         val playAgain = ButtonType("Play again")
@@ -519,7 +520,7 @@ class MyController : Controller() {
      */
     fun exitFromGameView() {
         val contentText = "All your progress will be reset"
-        val alert = createDialog("Exit", "All your progress will be reset", contentText, Alert.AlertType.CONFIRMATION)
+        val alert = createDialog("Exit", "All your progress will be reset", contentText, Alert.AlertType.CONFIRMATION, gameView.currentWindow)
         val yes = ButtonType("Yes")
         val no = ButtonType("No")
         alert.buttonTypes.setAll(yes, no)
@@ -547,7 +548,8 @@ class MyController : Controller() {
         title: String,
         headerText: String,
         contentText: String,
-        alertType: Alert.AlertType
+        alertType: Alert.AlertType,
+        owner: Window?
     ): Alert {
         val alert = Alert(alertType)
         alert.initStyle(StageStyle.UNDECORATED)
@@ -563,6 +565,7 @@ class MyController : Controller() {
         val dialogPane = alert.dialogPane
         dialogPane.stylesheets.add(resources["/dialog.css"])
         dialogPane.styleClass.add("notification")
+        alert.initOwner(owner)
         return alert
     }
 
@@ -578,7 +581,7 @@ class MyController : Controller() {
         runAsync(status) {
             result = Searcher.searchPath(labyrinth, moveLimit) // пытаемся решить
         }
-        val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION)
+        val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION, gameView.currentWindow)
         val label = Text("").apply {
             fill = Paint.valueOf(Styles.colorOfText)
             font = Styles.dialogFont
@@ -632,8 +635,8 @@ class MyController : Controller() {
                 "",
                 "That's it.",
                 "Here is the solution to the labyrinth. Click OK to exit",
-                Alert.AlertType.INFORMATION
-            )
+                Alert.AlertType.INFORMATION,
+                gameView.currentWindow)
         }
         val taskStatus = TaskStatus().apply {
             this.completed.addListener(ChangeListener { _, _, completed ->

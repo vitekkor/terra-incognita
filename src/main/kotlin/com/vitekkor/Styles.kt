@@ -2,6 +2,7 @@ package com.vitekkor
 
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
+import javafx.scene.text.Font
 import javafx.scene.text.TextAlignment
 import tornadofx.*
 
@@ -11,6 +12,7 @@ class Styles : Stylesheet() {
         val main by cssclass()
         val notification by cssclass()
         val rules by cssclass()
+        val error_tooltip by cssclass()
         val mainFont = loadFont("/fonts/Super_Maizen.otf", 32)!!
         val dialogFont = loadFont("/fonts/Super_Maizen.otf", 16)!!
         private val colorOfBackground = c("#05071F")
@@ -96,6 +98,12 @@ class Styles : Stylesheet() {
             backgroundRadius += box(radiusOfBorder)
             font = mainFont
             fontSize = 16.px
+        }
+        error_tooltip {
+            textFill = Paint.valueOf(colorOfText)
+            backgroundColor = multi(Color.BLACK)
+            font = Font.font("Consolas")
+            fontSize = 12.px
         }
     }
 }

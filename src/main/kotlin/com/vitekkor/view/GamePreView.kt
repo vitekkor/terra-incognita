@@ -24,10 +24,13 @@ class GamePreView : Fragment() {
     private lateinit var selectedHeight: SimpleIntegerProperty
     private lateinit var selectedWidth: SimpleIntegerProperty
     private val emptyHBox = hbox { alignment = Pos.CENTER }
+
     /**Default labyrinth width*/
     private lateinit var comboboxWidth: ComboBox<Number>
+
     /**Default labyrinth height*/
     private lateinit var comboboxHeight: ComboBox<Number>
+
     /**Hbox with default labyrinths*/
     private lateinit var defaultLabyrinth: HBox
     private val movesLimit = textfield("1000") {
@@ -73,7 +76,13 @@ class GamePreView : Fragment() {
         hbox {
             alignment = Pos.CENTER
             button("Choose labyrinth from file").action {
-                file = chooseFile("Choose file", extensions, initialDirectory, FileChooserMode.Single)
+                file = chooseFile(
+                    "Choose file",
+                    extensions,
+                    initialDirectory,
+                    FileChooserMode.Single,
+                    this@GamePreView.currentWindow
+                )
                 if (file.isNotEmpty()) {
                     defaultLabyrinth.removeFromParent()
                     fileLabel.text = "Chosen file: ${file[0].name}"
@@ -88,11 +97,14 @@ class GamePreView : Fragment() {
                 when {// проверяем корректность введённых имени и лимита ходов
                     playerName.text.trim().isEmpty() -> playerName.addClass("error")
                     movesLimit.text.trim().isEmpty() ||
-                            movesLimit.text.trim().toIntOrNull() == null -> movesLimit.addClass("error")
+                            movesLimit.text.trim().toIntOrNull() ?: -1 < 1 -> movesLimit.addClass("error")
                     defaultLabyrinth.parent != null -> {// если выбран лабиринт по умолчанию
                         // пытаемся создать лабиринт
-                        if (controller.loadLabyrinth(size =
-                                comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt())) {
+                        if (controller.loadLabyrinth(
+                                size =
+                                comboboxWidth.selectedItem!!.toInt() to comboboxHeight.selectedItem!!.toInt()
+                            )
+                        ) {
                             controller.moveLimit = movesLimit.text.trim().toInt() // устанавливаем лимит ходов
                             controller.name = playerName.text // имя
                             // и начинаем игру
