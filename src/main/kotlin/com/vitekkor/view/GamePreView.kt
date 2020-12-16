@@ -156,7 +156,7 @@ class GamePreView : Fragment() {
         super.onDock()
         movesLimit.text = controller.moveLimit.toString()
         playerName.text = controller.name
-        playerName.style += "-fx-text-fill: #e7e5e5"
-        movesLimit.style += "-fx-text-fill: #e7e5e5"
+        playerName.style += ";-fx-text-fill: #e7e5e5"
+        movesLimit.style += ";-fx-text-fill: #e7e5e5"
     }
 }
