@@ -2,7 +2,7 @@
 
  * [О проекте](#About_project)
  * [Правила](#Rules)
- * [Алгоритм решения лабиринтов](#Algorithm)
+ * [Метод решения лабиринтов](#Algorithm)
  * [Иллюстрации игры](#Illustrations)
 
  ## <a name="About_project"></a>    О проекте
