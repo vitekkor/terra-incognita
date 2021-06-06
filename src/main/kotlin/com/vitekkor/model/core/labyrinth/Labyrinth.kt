@@ -41,6 +41,7 @@ class Labyrinth private constructor(val width: Int, val height: Int,  private va
          * @throws IllegalArgumentException if the labyrinth file is not formatted correctly
          * @throws IllegalStateException if the wormholes are incorrectly placed*/
         fun createFromFile(file: File): Labyrinth {
+            require(file.exists()) { "File does not exist" }
             val lines = file.readLines()
 
             require(lines.isNotEmpty()) { "Empty File" } // проверяем не пустой ли файл

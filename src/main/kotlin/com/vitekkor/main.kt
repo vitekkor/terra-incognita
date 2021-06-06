@@ -2,6 +2,6 @@ package com.vitekkor
 
 import tornadofx.launch
 
-fun main() {
+fun main(args: Array<String>) {
     launch<MyApp>()
 }

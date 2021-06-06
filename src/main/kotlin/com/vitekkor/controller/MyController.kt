@@ -33,13 +33,14 @@ import java.io.File
  * The controller that provides the connection between the game logic and its display
  */
 class MyController : Controller() {
+    private lateinit var stackMap: StackPane
     private val gameView: GameView by inject()
     private val mainView = find(MainView::class)
     private val gamePreView = find(GamePreView::class)
     private val mainMenuView = find(MainMenuView::class)
 
     /**File formatting rules.*/
-    private val fileFormat = File(resources.url("/error.txt").toURI()).readText()
+    private val fileFormat = resources.text("/error.txt")
 
     /**Alert about an error when trying to create a labyrinth from file.*/
     private var errorAlert: Alert? = null
@@ -94,8 +95,7 @@ class MyController : Controller() {
             load(file)
         } else {
             if (size != null) {
-                val path = resources.url("/labyrinths/${size.first}x${size.second}.txt").toURI()
-                val localLabyrinth = File(path)
+                val localLabyrinth = File("./labyrinths/${size.first}x${size.second}.txt")
                 load(localLabyrinth)
             } else {
                 showAlert("File is not selected")
@@ -235,10 +235,11 @@ class MyController : Controller() {
      * Call only after calling [loadLabyrinth]!
      * @return StackPane with tiles
      */
-    fun createMap(): StackPane {
+    fun createMap(): Triple<StackPane, Double, Double> {
         map.clear()
         val playerStackPane = StackPane()
         val stackPane = StackPane()
+        var entranceCoordinates = 0.0 to 0.0
 
         // "строим" верхние стены
         for (i in 0 until labyrinth.width) {
@@ -287,6 +288,7 @@ class MyController : Controller() {
                     }
                     "entrance" -> { // добавляем вход
                         val entrance = getStartOrExit(true, j, i)
+                        entranceCoordinates = -entrance.translateX to -entrance.translateY
                         entrance.isVisible = true
                         // добавляем игрока
                         playerMovesAnimation = getTile("player")
@@ -322,7 +324,8 @@ class MyController : Controller() {
         }
 
         stackPane.add(playerStackPane) // добавляем игрока
-        return stackPane
+        stackMap = stackPane
+        return Triple(stackPane, entranceCoordinates.first, entranceCoordinates.second)
     }
 
     /**
@@ -381,6 +384,8 @@ class MyController : Controller() {
                 keyframe(1.seconds) {
                     keyvalue(playerMovesAnimation.translateXProperty(), x + playerMovesAnimation.translateX)
                     keyvalue(playerMovesAnimation.translateYProperty(), y + playerMovesAnimation.translateY)
+                    keyvalue(stackMap.translateXProperty(), stackMap.translateX - x)
+                    keyvalue(stackMap.translateYProperty(), stackMap.translateY - y)
                 }
                 setOnFinished {
                     // если клетка, в которую походил игрок, червоточина, то надо отрисовать перемещение в следующую
@@ -397,6 +402,8 @@ class MyController : Controller() {
                             keyframe(0.67.seconds) {
                                 keyvalue(playerMovesAnimation.translateXProperty(), newX, Interpolator.EASE_BOTH)
                                 keyvalue(playerMovesAnimation.translateYProperty(), newY, Interpolator.EASE_BOTH)
+                                keyvalue(stackMap.translateXProperty(), -newX, Interpolator.EASE_BOTH)
+                                keyvalue(stackMap.translateYProperty(), -newY, Interpolator.EASE_BOTH)
                                 setOnFinished {
                                     moveAllowedProperty.value = true
                                 }//закончили отрисовку, можно ходить дальше
@@ -520,7 +527,13 @@ class MyController : Controller() {
      */
     fun exitFromGameView() {
         val contentText = "All your progress will be reset"
-        val alert = createDialog("Exit", "All your progress will be reset", contentText, Alert.AlertType.CONFIRMATION, gameView.currentWindow)
+        val alert = createDialog(
+            "Exit",
+            "All your progress will be reset",
+            contentText,
+            Alert.AlertType.CONFIRMATION,
+            gameView.currentWindow
+        )
         val yes = ButtonType("Yes")
         val no = ButtonType("No")
         alert.buttonTypes.setAll(yes, no)
@@ -581,7 +594,13 @@ class MyController : Controller() {
         runAsync(status) {
             result = Searcher.searchPath(labyrinth, moveLimit) // пытаемся решить
         }
-        val alert = createDialog("Terra Incognita", "Trying to solve..", "", Alert.AlertType.INFORMATION, gameView.currentWindow)
+        val alert = createDialog(
+            "Terra Incognita",
+            "Trying to solve..",
+            "",
+            Alert.AlertType.INFORMATION,
+            gameView.currentWindow
+        )
         val label = Text("").apply {
             fill = Paint.valueOf(Styles.colorOfText)
             font = Styles.dialogFont
@@ -603,16 +622,16 @@ class MyController : Controller() {
         val dialogResult = alert.showAndWait()
 
         fun showPath() { // показываем прохождение
-                alert.close()
-                if (result.isNotEmpty()) {
-                    moveAllowedProperty.value = true
-                    notAHuman = true
-                    playerLocation = labyrinth.entrances[0]
-                    player = Humanlike(result)
-                    gameMaster!!.setNewPlayer(player!!)
-                    makeMove((player!!.getNextMove() as WalkMove).direction)
-                    // далее функция будет вызываться сама, когда moveAllowedProperty.value изменяется с false на true
-                }
+            alert.close()
+            if (result.isNotEmpty()) {
+                moveAllowedProperty.value = true
+                notAHuman = true
+                playerLocation = labyrinth.entrances[0]
+                player = Humanlike(result)
+                gameMaster!!.setNewPlayer(player!!)
+                makeMove((player!!.getNextMove() as WalkMove).direction)
+                // далее функция будет вызываться сама, когда moveAllowedProperty.value изменяется с false на true
+            }
         }
         if (status.completed.value) { // закрываем диалоговое окно
             try {
@@ -636,7 +655,8 @@ class MyController : Controller() {
                 "That's it.",
                 "Here is the solution to the labyrinth. Click OK to exit",
                 Alert.AlertType.INFORMATION,
-                gameView.currentWindow)
+                gameView.currentWindow
+            )
         }
         val taskStatus = TaskStatus().apply {
             this.completed.addListener(ChangeListener { _, _, completed ->
@@ -657,15 +677,15 @@ class MyController : Controller() {
 
     companion object {
         /**X offset for x (66.0)**/
-        private const val DX_X = 66.0
+        const val DX_X = 66.0
 
         /**X offset for y (20.3)**/
-        private const val DX_Y = 20.3
+        const val DX_Y = 20.3
 
         /**Y offset for x (39.0)**/
-        private const val DY_X = 39.0
+        const val DY_X = 39.0
 
         /**Y offset for y (37.0)**/
-        private const val DY_Y = 37.0
+        const val DY_Y = 37.0
     }
 }

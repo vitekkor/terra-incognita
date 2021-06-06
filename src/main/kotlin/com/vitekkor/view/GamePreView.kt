@@ -44,7 +44,7 @@ class GamePreView : Fragment() {
         add(movesLimit)
     }
     private lateinit var file: List<File>
-    private val initialDirectory = File(resources.url("/labyrinths/").toURI())
+    private val initialDirectory = File("./labyrinths").apply { if (!exists()) mkdir() }
     private val extensions = arrayOf(FileChooser.ExtensionFilter("txt", listOf("*.txt")))
     private val cancelButton = button("cancel") {
         action {

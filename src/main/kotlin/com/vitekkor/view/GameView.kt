@@ -10,7 +10,6 @@ import javafx.scene.input.KeyCombination
 import javafx.scene.layout.Background
 import javafx.scene.layout.BackgroundFill
 import javafx.scene.layout.CornerRadii
-import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import tornadofx.*
 
@@ -58,39 +57,11 @@ class GameView : View() {
         root.add(movesLimitLabel)
         root.add(playersName)
         root.add(helpButton)
-        val stackPane = controller.createMap()
+        val (stackPane, translateX, translateY) = controller.createMap()
         root.add(stackPane)
         stackPane.toBack()
-        movableAndZoomableStackpane(stackPane)
+        stackPane.translateX = translateX
+        stackPane.translateY = translateY
         movesLimitLabel.text = "Moves left: ${controller.startGame()}"
-    }
-
-    /**
-     * Sets of movable and zoomable stackPane
-     */
-    private fun movableAndZoomableStackpane(stackPane: StackPane) {
-        var x = 0.0
-        var y = 0.0
-        var lastTranslateX = 0.0
-        var lastTranslateY = 0.0
-        stackPane.setOnMousePressed { e ->
-            lastTranslateX = stackPane.translateX
-            lastTranslateY = stackPane.translateY
-            x = e.screenX
-            y = e.screenY
-        }
-        stackPane.setOnMouseDragged { e ->
-            stackPane.translateX = lastTranslateX + e.screenX - x
-            stackPane.translateY = lastTranslateY + e.screenY - y
-        }
-        stackPane.setOnScroll { e ->
-            var zoomFactor = 1.05
-            val deltaY: Double = e.deltaY
-            if (deltaY < 0) {
-                zoomFactor = 2.0 - zoomFactor
-            }
-            stackPane.scaleX *= zoomFactor
-            stackPane.scaleY *= zoomFactor
-        }
     }
 }
